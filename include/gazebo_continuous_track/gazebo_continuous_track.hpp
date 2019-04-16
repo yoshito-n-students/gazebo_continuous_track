@@ -1,3 +1,6 @@
+#ifndef GAZEBO_CONTINUOUS_TRACK
+#define GAZEBO_CONTINUOUS_TRACK
+
 #include <iostream>
 #include <string>
 
@@ -120,3 +123,5 @@ public:
 };
 
 } // namespace gazebo
+
+#endif
