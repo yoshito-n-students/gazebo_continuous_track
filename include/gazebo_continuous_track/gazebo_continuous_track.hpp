@@ -103,6 +103,8 @@ public:
       }
     }
 
+    // TODO: reduce the mass and inertia of a corresponding link
+
     // done!!
     std::cout << "[" << plugin_name << "]:"
               << " Loaded plugin" << std::endl;
