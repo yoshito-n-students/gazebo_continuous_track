@@ -9,6 +9,11 @@
 
 #include <boost/lexical_cast.hpp>
 
+//
+// unmaintained! if you want to populate wheels/axles/belts to simulate a continuous track,
+// use urdf/macros_wheels.xacro .
+//
+
 namespace gazebo {
 
 class ContinuousTrack : public ModelPlugin {
