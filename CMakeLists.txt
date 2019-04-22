@@ -102,7 +102,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES continuous_track
+#  LIBRARIES continuous_track
   CATKIN_DEPENDS gazebo_dev
 #  DEPENDS system_lib
 )
@@ -119,10 +119,10 @@ include_directories(
 )
 
 ## Declare a C++ library
-add_library(
-  continuous_track
-  src/gazebo_continuous_track.cpp
-)
+#add_library(
+#  continuous_track
+#  src/gazebo_continuous_track.cpp
+#)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -145,10 +145,10 @@ add_library(
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(
-  continuous_track
-  ${catkin_LIBRARIES}
-)
+#target_link_libraries(
+#  continuous_track
+#  ${catkin_LIBRARIES}
+#)
 
 #############
 ## Install ##
