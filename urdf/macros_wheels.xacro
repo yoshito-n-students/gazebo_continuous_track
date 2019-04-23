@@ -45,8 +45,8 @@
             <mass>${mass}</mass>
             <inertia>
                 <ixx>${mass * (radius * radius / 4 + length * length / 12)}</ixx>
-                <iyy>${mass * (radius * radius / 4 + length * length / 12)}</iyy>
-                <izz>${mass * radius * radius / 2}</izz>
+                <iyy>${mass * radius * radius / 2}</iyy>
+                <izz>${mass * (radius * radius / 4 + length * length / 12)}</izz>
             </inertia>
         </inertial>
         <collision name="collision">
