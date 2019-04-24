@@ -40,7 +40,7 @@
 
     <!-- wheel/axle/belt templates which can be used with above macros -->
 
-    <xacro:macro name="make_wheel_template" params="mass length radius">
+    <xacro:macro name="make_wheel_template" params="mass length radius mu">
         <inertial>
             <mass>${mass}</mass>
             <inertia>
@@ -57,6 +57,14 @@
                     <radius>${radius}</radius>
                 </cylinder>
             </geometry>
+            <surface>
+                <friction>
+                    <ode>
+                        <mu>${mu}</mu>
+                        <mu2>${mu}</mu2>
+                    </ode>
+                </friction>
+            </surface>
         </collision>
     </xacro:macro>
 
@@ -91,10 +99,10 @@
 
     <!-- macros for populating wheels/axles/belts with above macros and templates -->
 
-    <xacro:macro name="populate_wheels" params="name_prefix x:=0 y:=0 z:=0 roll:=0 pitch:=0 yaw:=0 dx:=0 dy:=0 dz:=0 mass length radius count">
+    <xacro:macro name="populate_wheels" params="name_prefix x:=0 y:=0 z:=0 roll:=0 pitch:=0 yaw:=0 dx:=0 dy:=0 dz:=0 mass length radius mu:=0.5 count">
         <xacro:populate_links name_prefix="${name_prefix}" x="${x}" y="${y}" z="${z}" roll="${roll}" pitch="${pitch}" yaw="${yaw}" dx="${dx}" dy="${dy}" dz="${dz}" count="${count}">
             <template>
-                <xacro:make_wheel_template mass="${mass}" length="${length}" radius="${radius}" />
+                <xacro:make_wheel_template mass="${mass}" length="${length}" radius="${radius}" mu="${mu}" />
             </template>
         </xacro:populate_links>
     </xacro:macro>
