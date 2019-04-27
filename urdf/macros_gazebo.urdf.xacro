@@ -85,6 +85,8 @@
         <parent>${parent}</parent>
         <axis>
             <xyz>0 1 0</xyz>
+            <!-- use the joint frame, which defaults to the child link axis, to decsribe the axis -->
+            <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
             <ode>
@@ -130,6 +132,8 @@
         <parent>${parent}</parent>
         <axis>
             <xyz>1 0 0</xyz>
+            <!-- use the joint frame, which defaults to the child link axis, to decsribe the axis -->
+            <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
             <ode>
