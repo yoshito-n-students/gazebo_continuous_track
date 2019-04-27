@@ -102,7 +102,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES continuous_track
+#  LIBRARIES ContinuousTrack
   CATKIN_DEPENDS gazebo_dev
 #  DEPENDS system_lib
 )
@@ -120,7 +120,7 @@ include_directories(
 
 ## Declare a C++ library
 add_library(
-  continuous_track
+  ContinuousTrack
   src/gazebo_continuous_track.cpp
 )
 
@@ -146,7 +146,7 @@ add_library(
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(
-  continuous_track
+  ContinuousTrack
   ${catkin_LIBRARIES}
 )
 
