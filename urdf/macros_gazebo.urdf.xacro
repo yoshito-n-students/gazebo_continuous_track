@@ -85,7 +85,9 @@
         <parent>${parent}</parent>
         <axis>
             <xyz>0 1 0</xyz>
-            <!-- use the joint frame, which defaults to the child link axis, to decsribe the axis -->
+            <!-- use the joint frame, which defaults to the child link axis, to decsribe the axis. -->
+            <!-- if the child link is made from the above wheel template,                          -->
+            <!-- the axis matches the center line of the cylinder                                  -->
             <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
@@ -132,7 +134,9 @@
         <parent>${parent}</parent>
         <axis>
             <xyz>1 0 0</xyz>
-            <!-- use the joint frame, which defaults to the child link axis, to decsribe the axis -->
+            <!-- use the joint frame, which defaults to the child link axis, to decsribe the axis. -->
+            <!-- if the child link is made from the above board template,                          -->
+            <!-- the axis matches the front direction of the board                                 -->
             <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
