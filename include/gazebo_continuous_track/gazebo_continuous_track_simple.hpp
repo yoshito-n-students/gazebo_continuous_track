@@ -1,5 +1,5 @@
-#ifndef GAZEBO_CONTINUOUS_TRACK
-#define GAZEBO_CONTINUOUS_TRACK
+#ifndef GAZEBO_CONTINUOUS_TRACK_SIMPLE
+#define GAZEBO_CONTINUOUS_TRACK_SIMPLE
 
 #include <iostream>
 #include <string>
@@ -13,7 +13,7 @@
 
 namespace gazebo {
 
-class ContinuousTrack : public ModelPlugin {
+class ContinuousTrackSimple : public ModelPlugin {
 public:
   void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) override {
     const std::string plugin_name(_sdf->GetAttribute("name")->GetAsString());
@@ -71,15 +71,16 @@ public:
               "No [track]::[segment]::[pitch_diameter] element for a rotational segment in sdf");
           const double segment_diameter(
               segment_elem->GetElement("pitch_diameter")->Get< double >());
-          segment_updaters_.push_back(boost::bind(&ContinuousTrack::UpdateRotationalSegment,
+          segment_updaters_.push_back(boost::bind(&ContinuousTrackSimple::UpdateRotationalSegment,
                                                   segment_joint, _1,
                                                   sprocket_diameter / segment_diameter));
           std::cout << "[" << plugin_name << "]:"
                     << " Set the pitch diameter for the track segment \""
                     << segment_joint->GetScopedName() << "\" to " << segment_diameter << std::endl;
         } else if (segment_type & physics::Joint::SLIDER_JOINT) {
-          segment_updaters_.push_back(boost::bind(&ContinuousTrack::UpdateTranslationalSegment,
-                                                  segment_joint, _1, sprocket_diameter / 2));
+          segment_updaters_.push_back(
+              boost::bind(&ContinuousTrackSimple::UpdateTranslationalSegment, segment_joint, _1,
+                          sprocket_diameter / 2));
         } else {
           GZ_ASSERT(false, "[track]::[segment]::[joint] must be a rotational or translational "
                            "joint having exactory 1 axis");
@@ -88,8 +89,8 @@ public:
     }
 
     // enable callback on beggining of every world step
-    update_connection_ =
-        event::Events::ConnectWorldUpdateBegin(boost::bind(&ContinuousTrack::Update, this, _1));
+    update_connection_ = event::Events::ConnectWorldUpdateBegin(
+        boost::bind(&ContinuousTrackSimple::Update, this, _1));
 
     // done!!
     std::cout << "[" << plugin_name << "]:"
