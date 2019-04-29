@@ -8,6 +8,8 @@
 #include <gazebo/common/common.hh>
 #include <gazebo/physics/physics.hh>
 
+#include <ros/package.h>
+
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
 
@@ -21,13 +23,14 @@ public:
     std::cout << "[" << plugin_name << "]:"
               << " Start loading plugin" << std::endl;
 
+    // assert the given sdf can be parsed as plugin property config
+    AssertPluginSDF(_sdf);
+
     // load from [sprocket] element
     double sprocket_diameter;
     {
-      GZ_ASSERT(_sdf->HasElement("sprocket"), "No [sprocket] element in sdf");
       const sdf::ElementPtr sprocket_elem(_sdf->GetElement("sprocket"));
       // [joint]
-      GZ_ASSERT(sprocket_elem->HasElement("joint"), "No [sprocket]::[joint] element in sdf");
       sprocket_joint_ = _model->GetJoint(sprocket_elem->GetElement("joint")->Get< std::string >());
       GZ_ASSERT(sprocket_joint_,
                 "Cannot find a joint with the value of [sprocket]::[joint] element in sdf");
@@ -37,8 +40,6 @@ public:
                 << " Found the sprocket joint \"" << sprocket_joint_->GetScopedName() << "\""
                 << std::endl;
       // [pitch_diameter]
-      GZ_ASSERT(sprocket_elem->HasElement("pitch_diameter"),
-                "No [pitch_diameter] element under [sprocket] element");
       sprocket_diameter = sprocket_elem->GetElement("pitch_diameter")->Get< double >();
       std::cout << "[" << plugin_name << "]:"
                 << " Set the pitch diameter of the sprocket to " << sprocket_diameter << std::endl;
@@ -46,15 +47,11 @@ public:
 
     // load from [track] element
     {
-      GZ_ASSERT(_sdf->HasElement("track"), "No [track] element in sdf");
       const sdf::ElementPtr track_elem(_sdf->GetElement("track"));
-      // [segment] (multiple)
-      GZ_ASSERT(track_elem->HasElement("segment"), "No [track]::[segment] element in sdf");
+      // [segment] (multiple, +)
       for (sdf::ElementPtr segment_elem = track_elem->GetElement("segment"); segment_elem;
            segment_elem = segment_elem->GetNextElement("segment")) {
         // [joint]
-        GZ_ASSERT(segment_elem->HasElement("joint"),
-                  "No [track]::[segment]::[joint] element in sdf");
         const physics::JointPtr segment_joint(
             _model->GetJoint(segment_elem->GetElement("joint")->Get< std::string >()));
         GZ_ASSERT(
@@ -97,7 +94,12 @@ public:
               << " Loaded plugin" << std::endl;
   }
 
-  void Update(const common::UpdateInfo &_info) {
+private:
+  // **************
+  // updating track
+  // **************
+
+  void Update(const common::UpdateInfo &_info) const {
     // get rotational velocity of sprocket
     const double sprocket_vel(sprocket_joint_->GetVelocity(0));
 
@@ -107,7 +109,6 @@ public:
     }
   }
 
-private:
   static void UpdateRotationalSegment(const physics::JointPtr &segment_joint,
                                       const double sprocket_vel, const double sprocket2segment) {
     // set the velocity of track segment according to the sprocket velocity
@@ -129,6 +130,29 @@ private:
     // using ODE's joint motors function
     segment_joint->SetParam("fmax", 0, 1e10);
     segment_joint->SetParam("vel", 0, sprocket_vel * sprocket2segment);
+  }
+
+  // **************
+  // formatting sdf
+  // **************
+
+  // get a sdf element which has been initialized by the plugin format file.
+  // the initialied sdf may look empty but have a format information.
+  static sdf::ElementPtr InitializedPluginSDF() {
+    const sdf::ElementPtr sdf(new sdf::Element());
+    sdf::initFile(ros::package::getPath("gazebo_continuous_track") +
+                      "/sdf/continuous_track_simple_plugin.sdf",
+                  sdf);
+    return sdf;
+  }
+
+  // merge the plugin format sdf and the given sdf.
+  // assert if the given sdf does not match the format
+  // (ex. no required element, value type mismatch, ...).
+  static void AssertPluginSDF(const sdf::ElementPtr &_sdf) {
+    static const sdf::ElementPtr fmt_seed(InitializedPluginSDF());
+    const sdf::ElementPtr fmt(fmt_seed->Clone());
+    sdf::readString("<sdf version='" SDF_VERSION "'>" + _sdf->ToString("") + "</sdf>", fmt);
   }
 
 private:
