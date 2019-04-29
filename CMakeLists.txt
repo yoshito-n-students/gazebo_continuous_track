@@ -9,6 +9,7 @@ project(gazebo_continuous_track)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   gazebo_dev
+  roslib
 )
 
 ## System dependencies are found with CMake's conventions
@@ -103,7 +104,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES ContinuousTrackSimple
-  CATKIN_DEPENDS gazebo_dev
+  CATKIN_DEPENDS gazebo_dev roslib
 #  DEPENDS system_lib
 )
 
@@ -119,6 +120,10 @@ include_directories(
 )
 
 ## Declare a C++ library
+add_library(
+  ContinuousTrack
+  src/gazebo_continuous_track.cpp
+)
 add_library(
   ContinuousTrackSimple
   src/gazebo_continuous_track_simple.cpp
@@ -145,6 +150,10 @@ add_library(
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
+target_link_libraries(
+  ContinuousTrack
+  ${catkin_LIBRARIES}
+)
 target_link_libraries(
   ContinuousTrackSimple
   ${catkin_LIBRARIES}

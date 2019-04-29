@@ -50,8 +50,11 @@
   <!--   <doc_depend>doxygen</doc_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>gazebo_dev</build_depend>
+  <build_depend>roslib</build_depend>
   <build_export_depend>gazebo_dev</build_export_depend>
+  <build_export_depend>roslib</build_export_depend>
   <exec_depend>gazebo_dev</exec_depend>
+  <exec_depend>roslib</exec_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
