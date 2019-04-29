@@ -149,7 +149,7 @@ private:
   // formatting sdf
   // **************
 
-  // get a sdf element which has been initialized by the given format file.
+  // get a sdf element which has been initialized by the plugin format file.
   // the initialied sdf may look empty but have a format information.
   static sdf::ElementPtr InitializedPluginSDF() {
     const sdf::ElementPtr sdf(new sdf::Element());
