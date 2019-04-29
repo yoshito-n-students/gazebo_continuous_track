@@ -2,7 +2,6 @@
 #define GAZEBO_CONTINUOUS_TRACK
 
 #include <iostream>
-#include <map>
 #include <string>
 #include <vector>
 
