@@ -106,4 +106,38 @@
         </visual>
     </xacro:macro>
 
+    <!-- macros for populating general links/joints -->
+
+    <xacro:macro name="populate_links" params="name_prefix x y z roll pitch yaw dx dy dz droll dpitch dyaw i:=1 count **template">
+        <xacro:if value="${i &lt;= count}">
+            <gazebo>
+                <link name="${name_prefix}${i}">
+                    <pose>${x} ${y} ${z} ${roll} ${pitch} ${yaw}</pose>
+                    <xacro:insert_block name="template" />
+                </link>
+            </gazebo>
+            <xacro:populate_links name_prefix="${name_prefix}" x="${x+dx}" y="${y+dy}" z="${z+dz}" roll="${roll+droll}" pitch="${pitch+dpitch}" yaw="${yaw+dyaw}" dx="${dx}" dy="${dy}" dz="${dz}" droll="${droll}" dpitch="${dpitch}" dyaw="${dyaw}" i="${i+1}" count="${count}">
+                <template>
+                    <xacro:insert_block name="template" />
+                </template>
+            </xacro:populate_links>
+        </xacro:if>
+    </xacro:macro>
+
+    <xacro:macro name="populate_joints" params="name_prefix type child_prefix i:=1 count **template">
+        <xacro:if value="${i &lt;= count}">
+            <gazebo>
+                <joint name="${name_prefix}${i}" type="${type}">
+                    <child>${child_prefix}${i}</child>
+                    <xacro:insert_block name="template" />
+                </joint>
+            </gazebo>
+            <xacro:populate_joints name_prefix="${name_prefix}" type="${type}" child_prefix="${child_prefix}" i="${i+1}" count="${count}">
+                <template>
+                    <xacro:insert_block name="template" />
+                </template>
+            </xacro:populate_joints>
+        </xacro:if>
+    </xacro:macro>
+
 </robot>
