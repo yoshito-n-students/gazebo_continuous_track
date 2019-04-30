@@ -46,19 +46,26 @@
         </xacro:if>
     </xacro:macro>
 
-    <!-- rotational segment templates which can be used with above population macros -->
+    <!-- macros which expand to inertial/collision/visual -->
 
-    <xacro:macro name="make_wheel_template" params="mass length radius mu min_depth">
+    <xacro:macro name="make_cylinder_inertial" params="pose:='0 0 0 0 0 0' mass length radius">
         <inertial>
+            <pose>${pose}</pose>
             <mass>${mass}</mass>
             <inertia>
                 <ixx>${mass * (radius * radius / 4 + length * length / 12)}</ixx>
-                <iyy>${mass * radius * radius / 2}</iyy>
-                <izz>${mass * (radius * radius / 4 + length * length / 12)}</izz>
+                <ixy>0</ixy>
+                <ixz>0</ixz>
+                <iyy>${mass * (radius * radius / 4 + length * length / 12)}</iyy>
+                <iyz>0</iyz>
+                <izz>${mass * radius * radius / 2}</izz>
             </inertia>
         </inertial>
-        <collision name="collision">
-            <pose>0 0 0 ${pi / 2} 0 0</pose>
+    </xacro:macro>
+
+    <xacro:macro name="make_cylinder_collision" params="name:='collision' pose:='0 0 0 0 0 0' length radius mu:=0.5 min_depth:=0.01">
+        <collision name="${name}">
+            <pose>${pose}</pose>
             <geometry>
                 <cylinder>
                     <length>${length}</length>
@@ -81,6 +88,77 @@
         </collision>
     </xacro:macro>
 
+    <xacro:macro name="make_cylinder_visual" params="name:='visual' pose:='0 0 0 0 0 0' length radius *material">
+        <visual name="${name}">
+            <pose>${pose}</pose>
+            <geometry>
+                <cylinder>
+                    <length>${length}</length>
+                    <radius>${radius}</radius>
+                </cylinder>
+            </geometry>
+            <xacro:insert_block name="material" />
+        </visual>
+    </xacro:macro>
+
+    <xacro:macro name="make_box_inertial" params="pose:='0 0 0 0 0 0' mass size_x size_y size_z">
+        <inertial>
+            <pose>${pose}</pose>
+            <mass>${mass}</mass>
+            <inertia>
+                <ixx>${mass * (size_y * size_y + size_z * size_z) / 12}</ixx>
+                <ixy>0</ixy>
+                <ixz>0</ixz>
+                <iyy>${mass * (size_z * size_z + size_x * size_x) / 12}</iyy>
+                <iyz>0</iyz>
+                <izz>${mass * (size_x * size_x + size_y * size_y) / 12}</izz>
+            </inertia>
+        </inertial>
+    </xacro:macro>
+
+    <xacro:macro name="make_box_collision" params="name:='collision' pose:='0 0 0 0 0 0' size mu:=0.5 min_depth:=0.01">
+        <collision name="${name}">
+            <pose>${pose}</pose>
+            <geometry>
+                <box>
+                    <size>${size}</size>
+                </box>
+            </geometry>
+            <surface>
+                <friction>
+                    <ode>
+                        <mu>${mu}</mu>
+                        <mu2>${mu}</mu2>
+                    </ode>
+                </friction>
+                <contact>
+                    <ode>
+                        <min_depth>${min_depth}</min_depth>
+                    </ode>
+                </contact>
+            </surface>
+        </collision>
+    </xacro:macro>
+
+    <xacro:macro name="make_box_visual" params="name:='visual' pose:='0 0 0 0 0 0' size *material">
+        <visual name="${name}">
+            <pose>${pose}</pose>
+            <geometry>
+                <box>
+                    <size>${size}</size>
+                </box>
+            </geometry>
+            <xacro:insert_block name="material" />
+        </visual>
+    </xacro:macro>
+
+    <!-- rotational segment templates which can be used with above population macros -->
+
+    <xacro:macro name="make_wheel_template" params="mass length radius mu min_depth">
+        <xacro:make_cylinder_inertial pose="0 0 0 ${pi / 2} 0 0" mass="${mass}" length="${length}" radius="${radius}" />
+        <xacro:make_cylinder_collision pose="0 0 0 ${pi / 2} 0 0" length="${length}" radius="${radius}" mu="${mu}" min_depth="${min_depth}" />
+    </xacro:macro>
+
     <xacro:macro name="make_axle_template" params="parent implicit_spring_damper">
         <parent>${parent}</parent>
         <axis>
@@ -100,34 +178,8 @@
     <!-- translational segment templates which can be used with above population macros -->
 
     <xacro:macro name="make_board_template" params="mass size_x size_y size_z mu min_depth">
-        <inertial>
-            <mass>${mass}</mass>
-            <inertia>
-                <ixx>${mass * (size_y * size_y + size_z * size_z) / 12}</ixx>
-                <iyy>${mass * (size_z * size_z + size_x * size_x) / 12}</iyy>
-                <izz>${mass * (size_x * size_x + size_y * size_y) / 12}</izz>
-            </inertia>
-        </inertial>
-        <collision name="collision">
-            <geometry>
-                <box>
-                    <size>${size_x} ${size_y} ${size_z}</size>
-                </box>
-            </geometry>
-            <surface>
-                <friction>
-                    <ode>
-                        <mu>${mu}</mu>
-                        <mu2>${mu}</mu2>
-                    </ode>
-                </friction>
-                <contact>
-                    <ode>
-                        <min_depth>${min_depth}</min_depth>
-                    </ode>
-                </contact>
-            </surface>
-        </collision>
+        <xacro:make_box_inertial mass="${mass}" size_x="${size_x}" size_y="${size_y}" size_z="${size_z}" />
+        <xacro:make_box_collision size="${size_x} ${size_y} ${size_z}" mu="${mu}" min_depth="${min_depth}" />
     </xacro:macro>
 
     <xacro:macro name="make_slider_template" params="parent implicit_spring_damper">
