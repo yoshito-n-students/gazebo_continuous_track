@@ -1,6 +1,7 @@
 #ifndef GAZEBO_CONTINUOUS_TRACK
 #define GAZEBO_CONTINUOUS_TRACK
 
+#include <cmath>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -79,6 +80,8 @@ private:
       // circumferential length of track
       double length;
       std::size_t elements_per_round;
+      // index of variant to be enabled
+      std::size_t variant_id;
     };
     Belt belt;
   };
@@ -102,6 +105,7 @@ private:
     Track::Belt belt;
     ComposeSegments(_traj_prop, _pattern_prop, belt.segments, belt.length);
     belt.elements_per_round = _pattern_prop.elements_per_round;
+    belt.variant_id = 0;
     return belt;
   }
 
@@ -354,17 +358,64 @@ private:
   // Updating simulation
   // ********************
 
-  void UpdateTrack(const common::UpdateInfo &_info) const {
-    // get rotational velocity of sprocket
-    const double sprocket_vel(track_.sprocket.joint->GetVelocity(0));
+  void UpdateTrack(const common::UpdateInfo &_info) {
+    // state of the track
+    const double track_pos(track_.sprocket.joint->Position(0) * track_.sprocket.joint_to_track);
+    const double track_vel(track_.sprocket.joint->GetVelocity(0) * track_.sprocket.joint_to_track);
 
-    for (const Track::Belt::Segment &segment : track_.belt.segments) {
-      for (const Track::Belt::Segment::Variant &variant : segment.variants) {
+    // number of unique elements on the track
+    const std::size_t n_elements(track_.belt.segments[0].variants.size());
+
+    // length which a element, or a set of unique elements is distributed along the track
+    const double len_per_element(track_.belt.length / track_.belt.elements_per_round);
+    const double len_per_elements(len_per_element * n_elements);
+
+    // update variant id
+    {
+      // track pos normalized in [0, len_per_elements)
+      double track_pos_per_elements(
+          track_pos >= 0.
+              ? track_pos - len_per_elements * std::floor(track_pos / len_per_elements)
+              : track_pos + len_per_elements * std::ceil(-track_pos / len_per_elements));
+
+      // new variant id to be enabled
+      const std::size_t new_variant_id(
+          static_cast< std::size_t >(std::round(track_pos_per_elements / len_per_element)) %
+          n_elements);
+
+      if (track_.belt.variant_id != new_variant_id) {
+        // TODO: disable visuals of last variant & enable visuals of new variant
+        track_.belt.variant_id = new_variant_id;
+      }
+
+      // set enabled or disabled for all links.
+      // this is because all links have been enabled at the beginning of every world update
+      // as the links are connected to another link which is enabled.
+      for (const Track::Belt::Segment &segment : track_.belt.segments) {
+        for (std::size_t variant_id = 0; variant_id < segment.variants.size(); ++variant_id) {
+          segment.variants[variant_id].link->SetEnabled(variant_id == track_.belt.variant_id);
+        }
+      }
+    }
+
+    // update position & velocity
+    {
+      // track pos normalized in [0, len_per_element)
+      double track_pos_per_element(
+          track_pos >= 0. ? track_pos - len_per_element * std::floor(track_pos / len_per_element)
+                          : track_pos + len_per_element * std::ceil(-track_pos / len_per_element));
+
+      // update joint position & velocity for each segment
+      for (const Track::Belt::Segment &segment : track_.belt.segments) {
+        const physics::JointPtr &joint(segment.variants[track_.belt.variant_id].joint);
+
+        // set position
+        joint->SetPosition(0, track_pos_per_element / segment.joint_to_track, true);
+
         // set the velocity of track segment according to the sprocket velocity
         // using ODE's joint motors function
-        variant.joint->SetParam("fmax", 0, 1e10);
-        variant.joint->SetParam(
-            "vel", 0, sprocket_vel * track_.sprocket.joint_to_track / segment.joint_to_track);
+        joint->SetParam("fmax", 0, 1e10);
+        joint->SetParam("vel", 0, track_vel / segment.joint_to_track);
       }
     }
   }
