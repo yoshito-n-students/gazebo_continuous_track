@@ -1,16 +1,12 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-    <!--                                                                  -->
-    <!-- macros for continuous track simulation by segmentation approach  -->
-    <!--   * track is built from multiple segments                        -->
-    <!--   * a segment is rotational or translational                     -->
-    <!--   * a rotational segment;                                        -->
-    <!--        * corresponds a round part of the track                   -->
-    <!--        * can be represented by a wheel link and axle joint       -->
-    <!--   * a translational segment;                                     -->
-    <!--        * corresponds a straight part of the track                -->
-    <!--        * can be represented by a board link and slider joint     -->
-    <!--                                                                  -->
+    <!--                                                                                              -->
+    <!-- macros for populating wheels / axles / boards / sliders                                      -->
+    <!--     * useful when difining entities for ContinuousTrackSimple plugin                         -->
+    <!--     * see gazebo_continuous_track_example/urdf/example_track_simple.urdf.xacro to know usage -->
+    <!--                                                                                              -->
+
+    <xacro:include filename="macros_common_gazebo.urdf.xacro" />
 
     <!-- macros for populating general links/joints -->
 
@@ -44,112 +40,6 @@
                 </template>
             </xacro:populate_joints>
         </xacro:if>
-    </xacro:macro>
-
-    <!-- macros which expand to inertial/collision/visual -->
-
-    <xacro:macro name="make_cylinder_inertial" params="pose:='0 0 0 0 0 0' mass length radius">
-        <inertial>
-            <pose>${pose}</pose>
-            <mass>${mass}</mass>
-            <inertia>
-                <ixx>${mass * (radius * radius / 4 + length * length / 12)}</ixx>
-                <ixy>0</ixy>
-                <ixz>0</ixz>
-                <iyy>${mass * (radius * radius / 4 + length * length / 12)}</iyy>
-                <iyz>0</iyz>
-                <izz>${mass * radius * radius / 2}</izz>
-            </inertia>
-        </inertial>
-    </xacro:macro>
-
-    <xacro:macro name="make_cylinder_collision" params="name:='collision' pose:='0 0 0 0 0 0' length radius mu:=0.5 min_depth:=0.01">
-        <collision name="${name}">
-            <pose>${pose}</pose>
-            <geometry>
-                <cylinder>
-                    <length>${length}</length>
-                    <radius>${radius}</radius>
-                </cylinder>
-            </geometry>
-            <surface>
-                <friction>
-                    <ode>
-                        <mu>${mu}</mu>
-                        <mu2>${mu}</mu2>
-                    </ode>
-                </friction>
-                <contact>
-                    <ode>
-                        <min_depth>${min_depth}</min_depth>
-                    </ode>
-                </contact>
-            </surface>
-        </collision>
-    </xacro:macro>
-
-    <xacro:macro name="make_cylinder_visual" params="name:='visual' pose:='0 0 0 0 0 0' length radius *material">
-        <visual name="${name}">
-            <pose>${pose}</pose>
-            <geometry>
-                <cylinder>
-                    <length>${length}</length>
-                    <radius>${radius}</radius>
-                </cylinder>
-            </geometry>
-            <xacro:insert_block name="material" />
-        </visual>
-    </xacro:macro>
-
-    <xacro:macro name="make_box_inertial" params="pose:='0 0 0 0 0 0' mass size_x size_y size_z">
-        <inertial>
-            <pose>${pose}</pose>
-            <mass>${mass}</mass>
-            <inertia>
-                <ixx>${mass * (size_y * size_y + size_z * size_z) / 12}</ixx>
-                <ixy>0</ixy>
-                <ixz>0</ixz>
-                <iyy>${mass * (size_z * size_z + size_x * size_x) / 12}</iyy>
-                <iyz>0</iyz>
-                <izz>${mass * (size_x * size_x + size_y * size_y) / 12}</izz>
-            </inertia>
-        </inertial>
-    </xacro:macro>
-
-    <xacro:macro name="make_box_collision" params="name:='collision' pose:='0 0 0 0 0 0' size mu:=0.5 min_depth:=0.01">
-        <collision name="${name}">
-            <pose>${pose}</pose>
-            <geometry>
-                <box>
-                    <size>${size}</size>
-                </box>
-            </geometry>
-            <surface>
-                <friction>
-                    <ode>
-                        <mu>${mu}</mu>
-                        <mu2>${mu}</mu2>
-                    </ode>
-                </friction>
-                <contact>
-                    <ode>
-                        <min_depth>${min_depth}</min_depth>
-                    </ode>
-                </contact>
-            </surface>
-        </collision>
-    </xacro:macro>
-
-    <xacro:macro name="make_box_visual" params="name:='visual' pose:='0 0 0 0 0 0' size *material">
-        <visual name="${name}">
-            <pose>${pose}</pose>
-            <geometry>
-                <box>
-                    <size>${size}</size>
-                </box>
-            </geometry>
-            <xacro:insert_block name="material" />
-        </visual>
     </xacro:macro>
 
     <!-- rotational segment templates which can be used with above population macros -->

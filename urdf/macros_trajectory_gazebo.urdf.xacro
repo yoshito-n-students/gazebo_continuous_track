@@ -1,0 +1,49 @@
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <!--                                                                                       -->
+    <!-- macros for links / joints representing track trajectory segments                      -->
+    <!--     * useful when difining entities for ContinuousTrack plugin                        -->
+    <!--     * see gazebo_continuous_track_example/urdf/example_track.urdf.xacro to know usage -->
+    <!--                                                                                       -->
+
+    <xacro:include filename="macros_common_gazebo.urdf.xacro" />
+
+    <!-- macros which expand to definition of link & joint representing track trajectory segments -->
+
+    <xacro:macro name="make_straight_segment" params="name_prefix x:=0 y:=0 z:=0 roll:=0 pitch:=0 yaw:=0 mass size_x size_y size_z parent">
+        <gazebo>
+            <link name="${name_prefix}_link">
+                <pose>${x} ${y} ${z} ${roll} ${pitch} ${yaw}</pose>
+                <xacro:make_box_inertial pose="${size_x / 2} 0 0 0 0 0" mass="${mass}" size_x="${size_x}" size_y="${size_y}" size_z="${size_z}" />
+            </link>
+            <joint name="${name_prefix}_joint" type="prismatic">
+                <pose>0 0 0 0 0 0</pose>
+                <parent>${parent}</parent>
+                <child>${name_prefix}_link</child>
+                <axis>
+                    <xyz>1 0 0</xyz>
+                    <use_parent_model_frame>0</use_parent_model_frame>
+                </axis>
+            </joint>
+        </gazebo>
+    </xacro:macro>
+
+    <xacro:macro name="make_arc_segment" params="name_prefix x:=0 y:=0 z:=0 roll:=0 pitch:=0 yaw:=0 mass length radius parent">
+        <gazebo>
+            <link name="${name_prefix}_link">
+                <pose>${x} ${y} ${z} ${roll} ${pitch} ${yaw}</pose>
+                <xacro:make_cylinder_inertial pose="0 0 ${-radius} ${pi / 2} 0 0" mass="${mass}" length="${length}" radius="${radius}" />
+            </link>
+            <joint name="${name_prefix}_joint" type="revolute">
+                <pose>0 0 ${-radius} 0 0 0</pose>
+                <parent>${parent}</parent>
+                <child>${name_prefix}_link</child>
+                <axis>
+                    <xyz>0 1 0</xyz>
+                    <use_parent_model_frame>0</use_parent_model_frame>
+                </axis>
+            </joint>
+        </gazebo>
+    </xacro:macro>
+
+</robot>
