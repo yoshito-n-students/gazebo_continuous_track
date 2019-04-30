@@ -7,7 +7,9 @@
 #include <vector>
 
 #include <gazebo/common/common.hh>
+#include <gazebo/msgs/msgs.hh>
 #include <gazebo/physics/physics.hh>
+#include <gazebo/transport/transport.hh>
 
 #include <gazebo_continuous_track/gazebo_continuous_track_properties.hpp>
 #include <ros/package.h>
@@ -30,6 +32,11 @@ public:
 
     std::cout << "[" << plugin_name_ << "]:"
               << " Start loading plugin" << std::endl;
+
+    // advertise the visual topic to toggle track visuals
+    node_.reset(new transport::Node());
+    node_->Init(_model->GetWorld()->Name());
+    publisher_ = node_->Advertise< msgs::Visual >("~/visual");
 
     // load properties from sdf
     const Properties prop(_model, _sdf);
@@ -128,9 +135,10 @@ private:
       // separation between adjacent elements
       const double len_step(_length / _pattern_prop.elements_per_round);
       // length left on the current segment to place elements
-      double len_left(0.);
+      double len_left(-len_step / 2.);
       // length traveled on the current segment
-      double len_traveled(0.);
+      // (to place exactly <elements_per_round> elements, we do not initialize this value to 0)
+      double len_traveled(len_step / 2.);
       // index of the element to be placed next
       std::size_t elem_id(variant_id);
 
@@ -379,12 +387,15 @@ private:
               : track_pos + len_per_elements * std::ceil(-track_pos / len_per_elements));
 
       // new variant id to be enabled
-      const std::size_t new_variant_id(
-          static_cast< std::size_t >(std::round(track_pos_per_elements / len_per_element)) %
-          n_elements);
+      const std::size_t new_variant_id(std::floor(track_pos_per_elements / len_per_element));
 
       if (track_.belt.variant_id != new_variant_id) {
-        // TODO: disable visuals of last variant & enable visuals of new variant
+        // disable visuals of last variant & enable visuals of new variant
+        for (const Track::Belt::Segment &segment : track_.belt.segments) {
+          publisher_->Publish(
+              ToggleVisualMsg(segment.variants[track_.belt.variant_id].link, false));
+          publisher_->Publish(ToggleVisualMsg(segment.variants[new_variant_id].link, true));
+        }
         track_.belt.variant_id = new_variant_id;
       }
 
@@ -418,6 +429,14 @@ private:
         joint->SetParam("vel", 0, track_vel / segment.joint_to_track);
       }
     }
+  }
+
+  msgs::Visual ToggleVisualMsg(const physics::LinkPtr &_link, const bool _visible) const {
+    msgs::Visual msg;
+    msg.set_name(_link->GetScopedName());
+    msg.set_parent_name(_link->GetModel()->GetScopedName());
+    msg.set_visible(_visible);
+    return msg;
   }
 
   // **************
@@ -469,6 +488,9 @@ private:
 private:
   // the name of this plugin. use as prefix of console message.
   std::string plugin_name_;
+  // transport to toggling track visuals
+  transport::NodePtr node_;
+  transport::PublisherPtr publisher_;
   // the track model
   Track track_;
   // callback connection handle
