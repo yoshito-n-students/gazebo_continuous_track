@@ -373,6 +373,30 @@ private:
   // formatting sdf
   // **************
 
+  // add collision format info to the given sdf element
+  static sdf::ElementPtr FormatAsCollisionSDF(const sdf::ElementPtr &_sdf) {
+    static const sdf::ElementPtr fmt(InitializedSDF("collision.sdf"));
+    return FormatSDF(_sdf, fmt);
+  }
+
+  // add visual format info to the given sdf element
+  static sdf::ElementPtr FormatAsVisualSDF(const sdf::ElementPtr &_sdf) {
+    static const sdf::ElementPtr fmt(InitializedSDF("visual.sdf"));
+    return FormatSDF(_sdf, fmt);
+  }
+
+  // add link format info to the given sdf element
+  static sdf::ElementPtr FormatAsLinkSDF(const sdf::ElementPtr &_sdf) {
+    static const sdf::ElementPtr fmt(InitializedSDF("link.sdf"));
+    return FormatSDF(_sdf, fmt);
+  }
+
+  // add joint format info to the given sdf element
+  static sdf::ElementPtr FormatAsJointSDF(const sdf::ElementPtr &_sdf) {
+    static const sdf::ElementPtr fmt(InitializedSDF("joint.sdf"));
+    return FormatSDF(_sdf, fmt);
+  }
+
   // get a sdf element which has been initialized by the given format file.
   // the initialied sdf may look empty but have a format information
   // (ex. default value for required element).
@@ -382,35 +406,12 @@ private:
     return sdf;
   }
 
-  // add collision format info to the given sdf element
-  static sdf::ElementPtr FormatAsCollisionSDF(const sdf::ElementPtr &_src) {
-    static const sdf::ElementPtr seed(InitializedSDF("collision.sdf"));
-    const sdf::ElementPtr dst(seed->Clone());
-    sdf::readString("<sdf version='" SDF_VERSION "'>" + _src->ToString("") + "</sdf>", dst);
-    return dst;
-  }
-
-  // add visual format info to the given sdf element
-  static sdf::ElementPtr FormatAsVisualSDF(const sdf::ElementPtr &_src) {
-    static const sdf::ElementPtr seed(InitializedSDF("visual.sdf"));
-    const sdf::ElementPtr dst(seed->Clone());
-    sdf::readString("<sdf version='" SDF_VERSION "'>" + _src->ToString("") + "</sdf>", dst);
-    return dst;
-  }
-
-  // add link format info to the given sdf element
-  static sdf::ElementPtr FormatAsLinkSDF(const sdf::ElementPtr &_src) {
-    static const sdf::ElementPtr seed(InitializedSDF("link.sdf"));
-    const sdf::ElementPtr dst(seed->Clone());
-    sdf::readString("<sdf version='" SDF_VERSION "'>" + _src->ToString("") + "</sdf>", dst);
-    return dst;
-  }
-
-  // add joint format info to the given sdf element
-  static sdf::ElementPtr FormatAsJointSDF(const sdf::ElementPtr &_src) {
-    static const sdf::ElementPtr seed(InitializedSDF("joint.sdf"));
-    const sdf::ElementPtr dst(seed->Clone());
-    sdf::readString("<sdf version='" SDF_VERSION "'>" + _src->ToString("") + "</sdf>", dst);
+  // merge the format sdf and the given sdf.
+  // assert if the given sdf does not match the format
+  // (ex. no required element, value type mismatch, ...).
+  static sdf::ElementPtr FormatSDF(const sdf::ElementPtr &_sdf, const sdf::ElementPtr &_fmt) {
+    const sdf::ElementPtr dst(_fmt->Clone());
+    sdf::readString("<sdf version='" SDF_VERSION "'>" + _sdf->ToString("") + "</sdf>", dst);
     return dst;
   }
 
