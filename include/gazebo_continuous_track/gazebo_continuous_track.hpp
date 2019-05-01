@@ -248,6 +248,9 @@ private:
               variant.link);
           variant.joint->Load(FormatAsJointSDF(joint_sdf));
           variant.joint->Init();
+          // set initial zero velocity
+          variant.joint->SetParam("fmax", 0, 1e10);
+          variant.joint->SetParam("vel", 0, 0.0);
 
           _segments[segm_id].variants.push_back(variant);
           std::cout << "[" << plugin_name_ << "]:"
