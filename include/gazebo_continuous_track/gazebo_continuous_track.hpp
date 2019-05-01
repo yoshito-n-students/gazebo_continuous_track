@@ -401,10 +401,8 @@ private:
           segment.variants[variant_id].link->SetEnabled(true);
 
           // track pos normalized in [0, len_per_element)
-          double track_pos_per_element(
-              track_pos >= 0.
-                  ? track_pos - len_per_element * std::floor(track_pos / len_per_element)
-                  : track_pos + len_per_element * std::ceil(-track_pos / len_per_element));
+          const double track_pos_per_element(
+              track_pos - len_per_element * std::floor(track_pos / len_per_element));
 
           // set position
           segment.variants[variant_id].joint->SetPosition(
@@ -428,10 +426,8 @@ private:
     const double len_per_elements(len_per_element * track_.belt.segments[0].variants.size());
 
     // track pos normalized in [0, len_per_elements)
-    double track_pos_per_elements(
-        _track_pos >= 0.
-            ? _track_pos - len_per_elements * std::floor(_track_pos / len_per_elements)
-            : _track_pos + len_per_elements * std::ceil(-_track_pos / len_per_elements));
+    const double track_pos_per_elements(_track_pos - len_per_elements *
+                                                         std::floor(_track_pos / len_per_elements));
 
     // new variant id to be enabled
     return static_cast< std::size_t >(std::floor(track_pos_per_elements / len_per_element));
