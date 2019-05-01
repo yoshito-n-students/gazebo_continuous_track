@@ -33,6 +33,9 @@ public:
     std::cout << "[" << plugin_name_ << "]:"
               << " Start loading plugin" << std::endl;
 
+    GZ_ASSERT(_model->GetWorld()->Physics()->GetType() == "ode",
+              "ContinuousTrack only supports ODE.");
+
     // advertise the visual topic to toggle track visuals
     node_.reset(new transport::Node());
     node_->Init(_model->GetWorld()->Name());
