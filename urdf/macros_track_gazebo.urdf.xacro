@@ -115,4 +115,13 @@
         </xacro:make_track_plugin>
     </xacro:macro>
 
+    <!-- macro which expands to box collision and visual. convenient when defining <pattern> in above macro -->
+
+    <xacro:macro name="make_box_element" params="pose:='0 0 0 0 0 0' size mu:=0.5 min_depth:=0.01 *material">
+        <xacro:make_box_collision pose="${pose}" size="${size}" mu="${mu}" min_depth="${min_depth}" />
+        <xacro:make_box_visual pose="${pose}" size="${size}">
+            <xacro:insert_block name="material" />
+        </xacro:make_box_visual>
+    </xacro:macro>
+
 </robot>
