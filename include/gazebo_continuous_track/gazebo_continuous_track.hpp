@@ -372,64 +372,66 @@ private:
     const double track_pos(track_.sprocket.joint->Position(0) * track_.sprocket.joint_to_track);
     const double track_vel(track_.sprocket.joint->GetVelocity(0) * track_.sprocket.joint_to_track);
 
-    // number of unique elements on the track
-    const std::size_t n_elements(track_.belt.segments[0].variants.size());
+    // new variant id to be enabled
+    const std::size_t new_variant_id(CalcVariantId(track_pos));
 
+    if (track_.belt.variant_id != new_variant_id) {
+      // enable visuals of new variant & disable visuals of last variant
+      // (do enable then disable to make something always visible)
+      for (const Track::Belt::Segment &segment : track_.belt.segments) {
+        publisher_->Publish(ToggleVisualMsg(segment.variants[new_variant_id].link, true));
+        publisher_->Publish(ToggleVisualMsg(segment.variants[track_.belt.variant_id].link, false));
+      }
+      track_.belt.variant_id = new_variant_id;
+    }
+
+    // length which a element is distributed along the track
+    const double len_per_element(track_.belt.length / track_.belt.elements_per_round);
+
+    // set enabled or disabled for all links.
+    // this is because all links have been enabled at the beginning of every world update
+    // as the links are connected to another link which is enabled.
+    for (const Track::Belt::Segment &segment : track_.belt.segments) {
+      for (std::size_t variant_id = 0; variant_id < segment.variants.size(); ++variant_id) {
+        if (variant_id == track_.belt.variant_id) {
+          // enable the link (should happen nothing but just in case)
+          segment.variants[variant_id].link->SetEnabled(true);
+
+          // track pos normalized in [0, len_per_element)
+          double track_pos_per_element(
+              track_pos >= 0.
+                  ? track_pos - len_per_element * std::floor(track_pos / len_per_element)
+                  : track_pos + len_per_element * std::ceil(-track_pos / len_per_element));
+
+          // set position
+          segment.variants[variant_id].joint->SetPosition(
+              0, track_pos_per_element / segment.joint_to_track, true);
+
+          // set the velocity of track segment according to the sprocket velocity
+          // using ODE's joint motors function
+          segment.variants[variant_id].joint->SetParam("fmax", 0, 1e10);
+          segment.variants[variant_id].joint->SetParam("vel", 0,
+                                                       track_vel / segment.joint_to_track);
+        } else {
+          segment.variants[variant_id].link->SetEnabled(false);
+        }
+      }
+    }
+  }
+
+  std::size_t CalcVariantId(const double _track_pos) const {
     // length which a element, or a set of unique elements is distributed along the track
     const double len_per_element(track_.belt.length / track_.belt.elements_per_round);
-    const double len_per_elements(len_per_element * n_elements);
+    const double len_per_elements(len_per_element * track_.belt.segments[0].variants.size());
 
-    // update variant id
-    {
-      // track pos normalized in [0, len_per_elements)
-      double track_pos_per_elements(
-          track_pos >= 0.
-              ? track_pos - len_per_elements * std::floor(track_pos / len_per_elements)
-              : track_pos + len_per_elements * std::ceil(-track_pos / len_per_elements));
+    // track pos normalized in [0, len_per_elements)
+    double track_pos_per_elements(
+        _track_pos >= 0.
+            ? _track_pos - len_per_elements * std::floor(_track_pos / len_per_elements)
+            : _track_pos + len_per_elements * std::ceil(-_track_pos / len_per_elements));
 
-      // new variant id to be enabled
-      const std::size_t new_variant_id(std::floor(track_pos_per_elements / len_per_element));
-
-      if (track_.belt.variant_id != new_variant_id) {
-        // disable visuals of last variant & enable visuals of new variant
-        for (const Track::Belt::Segment &segment : track_.belt.segments) {
-          publisher_->Publish(
-              ToggleVisualMsg(segment.variants[track_.belt.variant_id].link, false));
-          publisher_->Publish(ToggleVisualMsg(segment.variants[new_variant_id].link, true));
-        }
-        track_.belt.variant_id = new_variant_id;
-      }
-
-      // set enabled or disabled for all links.
-      // this is because all links have been enabled at the beginning of every world update
-      // as the links are connected to another link which is enabled.
-      for (const Track::Belt::Segment &segment : track_.belt.segments) {
-        for (std::size_t variant_id = 0; variant_id < segment.variants.size(); ++variant_id) {
-          segment.variants[variant_id].link->SetEnabled(variant_id == track_.belt.variant_id);
-        }
-      }
-    }
-
-    // update position & velocity
-    {
-      // track pos normalized in [0, len_per_element)
-      double track_pos_per_element(
-          track_pos >= 0. ? track_pos - len_per_element * std::floor(track_pos / len_per_element)
-                          : track_pos + len_per_element * std::ceil(-track_pos / len_per_element));
-
-      // update joint position & velocity for each segment
-      for (const Track::Belt::Segment &segment : track_.belt.segments) {
-        const physics::JointPtr &joint(segment.variants[track_.belt.variant_id].joint);
-
-        // set position
-        joint->SetPosition(0, track_pos_per_element / segment.joint_to_track, true);
-
-        // set the velocity of track segment according to the sprocket velocity
-        // using ODE's joint motors function
-        joint->SetParam("fmax", 0, 1e10);
-        joint->SetParam("vel", 0, track_vel / segment.joint_to_track);
-      }
-    }
+    // new variant id to be enabled
+    return static_cast< std::size_t >(std::floor(track_pos_per_elements / len_per_element));
   }
 
   msgs::Visual ToggleVisualMsg(const physics::LinkPtr &_link, const bool _visible) const {
