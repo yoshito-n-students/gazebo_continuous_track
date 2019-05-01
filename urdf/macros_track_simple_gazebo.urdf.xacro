@@ -58,7 +58,7 @@
 
     <!-- macros for populating segments with common population macros and templates -->
 
-    <xacro:macro name="populate_straight_segments_simple" params="name_prefix x:=0 y:=0 z:=0 roll:=0 pitch:=0 yaw:=0 dx:=0 dy:=0 dz:=0 droll:=0 dpitch:=0 dyaw:=0 mass size_x size_y size_z parent mu:=0.5 min_depth:=0.01 implicit_spring_damper:=1 count">
+    <xacro:macro name="populate_straight_segments_simple_no_visual" params="name_prefix x:=0 y:=0 z:=0 roll:=0 pitch:=0 yaw:=0 dx:=0 dy:=0 dz:=0 droll:=0 dpitch:=0 dyaw:=0 mass size_x size_y size_z parent mu:=0.5 min_depth:=0.01 implicit_spring_damper:=1 count">
         <xacro:populate_links name_prefix="${name_prefix}_link" x="${x}" y="${y}" z="${z}" roll="${roll}" pitch="${pitch}" yaw="${yaw}" dx="${dx}" dy="${dy}" dz="${dz}" droll="${droll}" dpitch="${dpitch}" dyaw="${dyaw}" count="${count}">
             <template>
                 <xacro:make_straight_segment_simple_link_template mass="${mass}" size_x="${size_x}" size_y="${size_y}" size_z="${size_z}" mu="${mu}" min_depth="${min_depth}" enable_visual="0">
@@ -74,7 +74,7 @@
     </xacro:macro>
 
     <!-- with visual -->
-    <xacro:macro name="populate_straight_segments_simple_v" params="name_prefix x:=0 y:=0 z:=0 roll:=0 pitch:=0 yaw:=0 dx:=0 dy:=0 dz:=0 droll:=0 dpitch:=0 dyaw:=0 mass size_x size_y size_z parent mu:=0.5 min_depth:=0.01 implicit_spring_damper:=1 *material count">
+    <xacro:macro name="populate_straight_segments_simple" params="name_prefix x:=0 y:=0 z:=0 roll:=0 pitch:=0 yaw:=0 dx:=0 dy:=0 dz:=0 droll:=0 dpitch:=0 dyaw:=0 mass size_x size_y size_z parent mu:=0.5 min_depth:=0.01 implicit_spring_damper:=1 *material count">
         <xacro:populate_links name_prefix="${name_prefix}_link" x="${x}" y="${y}" z="${z}" roll="${roll}" pitch="${pitch}" yaw="${yaw}" dx="${dx}" dy="${dy}" dz="${dz}" droll="${droll}" dpitch="${dpitch}" dyaw="${dyaw}" count="${count}">
             <template>
                 <xacro:make_straight_segment_simple_link_template mass="${mass}" size_x="${size_x}" size_y="${size_y}" size_z="${size_z}" mu="${mu}" min_depth="${min_depth}" enable_visual="1">
@@ -89,7 +89,7 @@
         </xacro:populate_joints>
     </xacro:macro>
 
-    <xacro:macro name="populate_arc_segments_simple" params="name_prefix x:=0 y:=0 z:=0 roll:=0 pitch:=0 yaw:=0 dx:=0 dy:=0 dz:=0 droll:=0 dpitch:=0 dyaw:=0 mass length radius parent mu:=0.5 min_depth:=0.01 implicit_spring_damper:=1 count">
+    <xacro:macro name="populate_arc_segments_simple_no_visual" params="name_prefix x:=0 y:=0 z:=0 roll:=0 pitch:=0 yaw:=0 dx:=0 dy:=0 dz:=0 droll:=0 dpitch:=0 dyaw:=0 mass length radius parent mu:=0.5 min_depth:=0.01 implicit_spring_damper:=1 count">
         <xacro:populate_links name_prefix="${name_prefix}_link" x="${x}" y="${y}" z="${z}" roll="${roll}" pitch="${pitch}" yaw="${yaw}" dx="${dx}" dy="${dy}" dz="${dz}" droll="${droll}" dpitch="${dpitch}" dyaw="${dyaw}" count="${count}">
             <template>
                 <xacro:make_arc_segment_simple_link_template mass="${mass}" length="${length}" radius="${radius}" mu="${mu}" min_depth="${min_depth}" enable_visual="0">
@@ -105,7 +105,7 @@
     </xacro:macro>
 
     <!-- with visual -->
-    <xacro:macro name="populate_arc_segments_simple_v" params="name_prefix x:=0 y:=0 z:=0 roll:=0 pitch:=0 yaw:=0 dx:=0 dy:=0 dz:=0 droll:=0 dpitch:=0 dyaw:=0 mass length radius parent mu:=0.5 min_depth:=0.01 implicit_spring_damper:=1 *material count">
+    <xacro:macro name="populate_arc_segments_simple" params="name_prefix x:=0 y:=0 z:=0 roll:=0 pitch:=0 yaw:=0 dx:=0 dy:=0 dz:=0 droll:=0 dpitch:=0 dyaw:=0 mass length radius parent mu:=0.5 min_depth:=0.01 implicit_spring_damper:=1 *material count">
         <xacro:populate_links name_prefix="${name_prefix}_link" x="${x}" y="${y}" z="${z}" roll="${roll}" pitch="${pitch}" yaw="${yaw}" dx="${dx}" dy="${dy}" dz="${dz}" droll="${droll}" dpitch="${dpitch}" dyaw="${dyaw}" count="${count}">
             <template>
                 <xacro:make_arc_segment_simple_link_template mass="${mass}" length="${length}" radius="${radius}" mu="${mu}" min_depth="${min_depth}" enable_visual="1">
@@ -151,20 +151,20 @@
 
     <!-- main entry point: macro for making oval track by ContinuousTrackSimple plugin -->
 
-    <xacro:macro name="make_track_simple" params="name x:=0 y:=0 z:=0 roll:=0 pitch:=0 yaw:=0 mass length radius width parent sprocket_joint pitch_diameter mu:=0.5 min_depth:=0.01 implicit_spring_damper:=1">
-        <xacro:populate_straight_segments_simple name_prefix="${name}_straight_segment" x="${x}" y="${y}" z="${z + radius / 2}" roll="${roll}" pitch="${pitch}" yaw="${yaw}" dz="${-radius}" dpitch="${pi}" mass="${mass / 4}" size_x="${length}" size_y="${width}" size_z="${radius}" parent="${parent}" mu="${mu}" min_depth="${min_depth}" implicit_spring_damper="${implicit_spring_damper}" count="2" />
-        <xacro:populate_arc_segments_simple name_prefix="${name}_arc_segment" x="${x + length / 2}" y="${y}" z="${z}" roll="${roll}" pitch="${pitch}" yaw="${yaw}" dx="${-length}" dpitch="${pi}" mass="${mass / 4}" length="${width}" radius="${radius}" parent="${parent}" mu="${mu}" min_depth="${min_depth}" implicit_spring_damper="${implicit_spring_damper}" count="2" />
+    <xacro:macro name="make_track_simple_no_visual" params="name x:=0 y:=0 z:=0 roll:=0 pitch:=0 yaw:=0 mass length radius width parent sprocket_joint pitch_diameter mu:=0.5 min_depth:=0.01 implicit_spring_damper:=1">
+        <xacro:populate_straight_segments_simple_no_visual name_prefix="${name}_straight_segment" x="${x}" y="${y}" z="${z + radius / 2}" roll="${roll}" pitch="${pitch}" yaw="${yaw}" dz="${-radius}" dpitch="${pi}" mass="${mass / 4}" size_x="${length}" size_y="${width}" size_z="${radius}" parent="${parent}" mu="${mu}" min_depth="${min_depth}" implicit_spring_damper="${implicit_spring_damper}" count="2" />
+        <xacro:populate_arc_segments_simple_no_visual name_prefix="${name}_arc_segment" x="${x + length / 2}" y="${y}" z="${z}" roll="${roll}" pitch="${pitch}" yaw="${yaw}" dx="${-length}" dpitch="${pi}" mass="${mass / 4}" length="${width}" radius="${radius}" parent="${parent}" mu="${mu}" min_depth="${min_depth}" implicit_spring_damper="${implicit_spring_damper}" count="2" />
         <xacro:make_track_simple_plugin name="${name}" sprocket_joint="${sprocket_joint}" pitch_diameter="${pitch_diameter}" />
     </xacro:macro>
 
     <!-- with visual -->
-    <xacro:macro name="make_track_simple_v" params="name x:=0 y:=0 z:=0 roll:=0 pitch:=0 yaw:=0 mass length radius width parent sprocket_joint pitch_diameter mu:=0.5 min_depth:=0.01 implicit_spring_damper:=1 *material">
-        <xacro:populate_straight_segments_simple_v name_prefix="${name}_straight_segment" x="${x}" y="${y}" z="${z + radius / 2}" roll="${roll}" pitch="${pitch}" yaw="${yaw}" dz="${-radius}" dpitch="${pi}" mass="${mass / 4}" size_x="${length}" size_y="${width}" size_z="${radius}" parent="${parent}" mu="${mu}" min_depth="${min_depth}" implicit_spring_damper="${implicit_spring_damper}" count="2">
+    <xacro:macro name="make_track_simple" params="name x:=0 y:=0 z:=0 roll:=0 pitch:=0 yaw:=0 mass length radius width parent sprocket_joint pitch_diameter mu:=0.5 min_depth:=0.01 implicit_spring_damper:=1 *material">
+        <xacro:populate_straight_segments_simple name_prefix="${name}_straight_segment" x="${x}" y="${y}" z="${z + radius / 2}" roll="${roll}" pitch="${pitch}" yaw="${yaw}" dz="${-radius}" dpitch="${pi}" mass="${mass / 4}" size_x="${length}" size_y="${width}" size_z="${radius}" parent="${parent}" mu="${mu}" min_depth="${min_depth}" implicit_spring_damper="${implicit_spring_damper}" count="2">
             <xacro:insert_block name="material" />
-        </xacro:populate_straight_segments_simple_v>
-        <xacro:populate_arc_segments_simple_v name_prefix="${name}_arc_segment" x="${x + length / 2}" y="${y}" z="${z}" roll="${roll}" pitch="${pitch}" yaw="${yaw}" dx="${-length}" dpitch="${pi}" mass="${mass / 4}" length="${width}" radius="${radius}" parent="${parent}" mu="${mu}" min_depth="${min_depth}" implicit_spring_damper="${implicit_spring_damper}" count="2">
+        </xacro:populate_straight_segments_simple>
+        <xacro:populate_arc_segments_simple name_prefix="${name}_arc_segment" x="${x + length / 2}" y="${y}" z="${z}" roll="${roll}" pitch="${pitch}" yaw="${yaw}" dx="${-length}" dpitch="${pi}" mass="${mass / 4}" length="${width}" radius="${radius}" parent="${parent}" mu="${mu}" min_depth="${min_depth}" implicit_spring_damper="${implicit_spring_damper}" count="2">
             <xacro:insert_block name="material" />
-        </xacro:populate_arc_segments_simple_v>
+        </xacro:populate_arc_segments_simple>
         <xacro:make_track_simple_plugin name="${name}" sprocket_joint="${sprocket_joint}" pitch_diameter="${pitch_diameter}" />
     </xacro:macro>
 
