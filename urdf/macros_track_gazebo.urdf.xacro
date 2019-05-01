@@ -75,11 +75,11 @@
 
     <!-- macro which expands to plugin definition -->
 
-    <xacro:macro name="make_track_plugin" params="name sprocket pitch_diameter length *pattern">
+    <xacro:macro name="make_track_plugin" params="name sprocket_joint pitch_diameter length *pattern">
         <gazebo>
             <plugin name="${name}" filename="libContinuousTrack.so">
                 <sprocket>
-                    <joint>${sprocket}</joint>
+                    <joint>${sprocket_joint}</joint>
                     <pitch_diameter>${pitch_diameter}</pitch_diameter>
                 </sprocket>
                 <trajectory>
@@ -107,10 +107,10 @@
 
     <!-- main entry point: macro for making oval track by ContinuousTrack plugin -->
 
-    <xacro:macro name="make_track" params="name x:=0 y:=0 z:=0 roll:=0 pitch:=0 yaw:=0 mass length radius width parent sprocket pitch_diameter *pattern implicit_spring_damper:=1">
+    <xacro:macro name="make_track" params="name x:=0 y:=0 z:=0 roll:=0 pitch:=0 yaw:=0 mass length radius width parent sprocket_joint pitch_diameter *pattern implicit_spring_damper:=1">
         <xacro:populate_straight_segments name_prefix="${name}_straight_segment" x="${x - length / 2}" y="${y}" z="${z + radius}" roll="${roll}" pitch="${pitch}" yaw="${yaw}" dx="${length}" dz="${-2 * radius}" dpitch="${pi}" mass="${mass / 4}" size_x="${length}" size_y="${width}" size_z="${radius}" parent="${parent}" implicit_spring_damper="${implicit_spring_damper}" count="2" />
         <xacro:populate_arc_segments name_prefix="${name}_arc_segment" x="${x + length / 2}" y="${y}" z="${z + radius}" roll="${roll}" pitch="${pitch}" yaw="${yaw}" dx="${-length}" dz="${-2 * radius}" dpitch="${pi}" mass="${mass / 4}" length="${width}" radius="${radius}" parent="${parent}" implicit_spring_damper="${implicit_spring_damper}" count="2" />
-        <xacro:make_track_plugin name="${name}" sprocket="${sprocket}" pitch_diameter="${pitch_diameter}" length="${length}">
+        <xacro:make_track_plugin name="${name}" sprocket_joint="${sprocket_joint}" pitch_diameter="${pitch_diameter}" length="${length}">
             <xacro:insert_block name="pattern" />
         </xacro:make_track_plugin>
     </xacro:macro>
