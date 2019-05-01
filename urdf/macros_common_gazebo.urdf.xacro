@@ -2,7 +2,7 @@
 
     <!-- macros which expand to inertial/collision/visual -->
 
-    <xacro:macro name="make_cylinder_inertial" params="pose:='0 0 0 0 0 0' mass length radius">
+    <xacro:macro name="make_cylinder_inertial" params="pose:=^|'0 0 0 0 0 0' mass:=^ length:=^ radius:=^">
         <inertial>
             <pose>${pose}</pose>
             <mass>${mass}</mass>
@@ -17,7 +17,7 @@
         </inertial>
     </xacro:macro>
 
-    <xacro:macro name="make_cylinder_collision" params="name:='collision' pose:='0 0 0 0 0 0' length radius mu:=0.5 min_depth:=0.01">
+    <xacro:macro name="make_cylinder_collision" params="name:='collision' pose:=^|'0 0 0 0 0 0' length:=^ radius:=^ mu:=^|0.5 min_depth:=^|0.01">
         <collision name="${name}">
             <pose>${pose}</pose>
             <geometry>
@@ -42,7 +42,7 @@
         </collision>
     </xacro:macro>
 
-    <xacro:macro name="make_cylinder_visual" params="name:='visual' pose:='0 0 0 0 0 0' length radius *material">
+    <xacro:macro name="make_cylinder_visual" params="name:='visual' pose:=^|'0 0 0 0 0 0' length:=^ radius:=^ *material">
         <visual name="${name}">
             <pose>${pose}</pose>
             <geometry>
@@ -55,7 +55,7 @@
         </visual>
     </xacro:macro>
 
-    <xacro:macro name="make_box_inertial" params="pose:='0 0 0 0 0 0' mass size_x size_y size_z">
+    <xacro:macro name="make_box_inertial" params="pose:=^|'0 0 0 0 0 0' mass:=^ size_x:=^ size_y:=^ size_z:=^">
         <inertial>
             <pose>${pose}</pose>
             <mass>${mass}</mass>
@@ -70,7 +70,7 @@
         </inertial>
     </xacro:macro>
 
-    <xacro:macro name="make_box_collision" params="name:='collision' pose:='0 0 0 0 0 0' size mu:=0.5 min_depth:=0.01">
+    <xacro:macro name="make_box_collision" params="name:='collision' pose:=^|'0 0 0 0 0 0' size:=^ mu:=^|0.5 min_depth:=^|0.01">
         <collision name="${name}">
             <pose>${pose}</pose>
             <geometry>
@@ -94,7 +94,7 @@
         </collision>
     </xacro:macro>
 
-    <xacro:macro name="make_box_visual" params="name:='visual' pose:='0 0 0 0 0 0' size *material">
+    <xacro:macro name="make_box_visual" params="name:='visual' pose:=^|'0 0 0 0 0 0' size:=^ *material">
         <visual name="${name}">
             <pose>${pose}</pose>
             <geometry>
@@ -108,7 +108,7 @@
 
     <!-- macros for populating general links/joints -->
 
-    <xacro:macro name="populate_links" params="name_prefix x y z roll pitch yaw dx dy dz droll dpitch dyaw i:=1 count **template">
+    <xacro:macro name="populate_links" params="name_prefix:=^ x:=^|0 y:=^|0 z:=^|0 roll:=^|0 pitch:=^|0 yaw:=^|0 dx:=^|0 dy:=^|0 dz:=^|0 droll:=^|0 dpitch:=^|0 dyaw:=^|0 i:=1 count:=^ **template">
         <xacro:if value="${i &lt;= count}">
             <gazebo>
                 <link name="${name_prefix}${i}">
@@ -116,7 +116,7 @@
                     <xacro:insert_block name="template" />
                 </link>
             </gazebo>
-            <xacro:populate_links name_prefix="${name_prefix}" x="${x+dx}" y="${y+dy}" z="${z+dz}" roll="${roll+droll}" pitch="${pitch+dpitch}" yaw="${yaw+dyaw}" dx="${dx}" dy="${dy}" dz="${dz}" droll="${droll}" dpitch="${dpitch}" dyaw="${dyaw}" i="${i+1}" count="${count}">
+            <xacro:populate_links x="${x+dx}" y="${y+dy}" z="${z+dz}" roll="${roll+droll}" pitch="${pitch+dpitch}" yaw="${yaw+dyaw}" i="${i+1}">
                 <template>
                     <xacro:insert_block name="template" />
                 </template>
@@ -124,7 +124,7 @@
         </xacro:if>
     </xacro:macro>
 
-    <xacro:macro name="populate_joints" params="name_prefix type child_prefix i:=1 count **template">
+    <xacro:macro name="populate_joints" params="name_prefix:=^ type:=^ child_prefix:=^ i:=1 count:=^ **template">
         <xacro:if value="${i &lt;= count}">
             <gazebo>
                 <joint name="${name_prefix}${i}" type="${type}">
@@ -132,7 +132,7 @@
                     <xacro:insert_block name="template" />
                 </joint>
             </gazebo>
-            <xacro:populate_joints name_prefix="${name_prefix}" type="${type}" child_prefix="${child_prefix}" i="${i+1}" count="${count}">
+            <xacro:populate_joints i="${i+1}">
                 <template>
                     <xacro:insert_block name="template" />
                 </template>
