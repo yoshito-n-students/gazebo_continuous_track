@@ -237,6 +237,8 @@ private:
               base_link->GetModel()->CreateLink(link_sdf->GetAttribute("name")->GetAsString());
           variant.link->Load(FormatAsLinkSDF(link_sdf));
           variant.link->Init();
+          // copy base link pose because it may be changed by another plugin loaded before this
+          variant.link->SetWorldPose(base_link->WorldPose());
 
           // joint
           const physics::JointPtr base_joint(_traj_prop.segments[segm_id].joint);
