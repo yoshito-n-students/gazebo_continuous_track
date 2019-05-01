@@ -140,7 +140,8 @@ private:
       // (to place exactly <elements_per_round> elements, we do not initialize this value to 0)
       double len_traveled(len_step / 2.);
       // index of the element to be placed next
-      std::size_t elem_id(variant_id);
+      // (variant[0] places element[n-1] first, ... variant[n-1] does element[0])
+      std::size_t elem_id(_pattern_prop.elements.size() - 1 - variant_id);
 
       //
       for (std::size_t segm_id = 0; segm_id < _traj_prop.segments.size(); ++segm_id) {
