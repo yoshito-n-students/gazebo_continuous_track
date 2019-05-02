@@ -464,7 +464,7 @@ private:
   }
 
   void QueueVisualToggleMsg(const physics::LinkPtr &_link, const bool _visible) {
-    msgs::VisualPtr msg;
+    msgs::VisualPtr msg(new msgs::Visual());
     msg->set_name(_link->GetScopedName());
     msg->set_parent_name(_link->GetModel()->GetScopedName());
     msg->set_visible(_visible);
