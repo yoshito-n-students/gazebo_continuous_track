@@ -14,12 +14,13 @@ class ContinuousTrackProperties {
 
 public:
   ContinuousTrackProperties(const physics::ModelPtr &_model, const sdf::ElementPtr &_sdf) {
-    // assert the given sdf can be parsed as plugin property config
-    AssertPluginSDF(_sdf);
+    // convert to a plugin sdf having element descriptions.
+    // this also asserts the given sdf matches the plugin sdf format.
+    const sdf::ElementPtr formatted_sdf(ToPluginSDF(_sdf));
 
-    sprocket = LoadSprocket(_model, _sdf->GetElement("sprocket"));
-    trajectory = LoadTrajectory(_model, _sdf->GetElement("trajectory"));
-    pattern = LoadPattern(_model, _sdf->GetElement("pattern"));
+    sprocket = LoadSprocket(_model, formatted_sdf->GetElement("sprocket"));
+    trajectory = LoadTrajectory(_model, formatted_sdf->GetElement("trajectory"));
+    pattern = LoadPattern(_model, formatted_sdf->GetElement("pattern"));
   }
 
   virtual ~ContinuousTrackProperties() {}
@@ -59,7 +60,7 @@ private:
   // ******************
 
   static Sprocket LoadSprocket(const physics::ModelPtr &_model, const sdf::ElementPtr &_sdf) {
-    // format has been checked in Load(). no need to check if required elements exist.
+    // format has been checked by ToPluginSDF(). no need to check if required elements exist.
 
     Sprocket sprocket;
 
@@ -77,7 +78,7 @@ private:
   }
 
   static Trajectory LoadTrajectory(const physics::ModelPtr &_model, const sdf::ElementPtr &_sdf) {
-    // format has been checked in LoadProperties(). no need to check if required elements exist.
+    // format has been checked by ToPluginSDF(). no need to check if required elements exist.
 
     Trajectory trajectory;
 
@@ -106,7 +107,7 @@ private:
   }
 
   static Pattern LoadPattern(const physics::ModelPtr &_model, const sdf::ElementPtr &_sdf) {
-    // format has been checked in LoadProperties(). no need to check if required elements exist.
+    // format has been checked by ToPluginSDF(). no need to check if required elements exist.
 
     Pattern pattern;
 
@@ -148,20 +149,21 @@ private:
 
   // get a sdf element which has been initialized by the plugin format file.
   // the initialied sdf may look empty but have a format information.
-  static sdf::ElementPtr InitializedPluginSDF() {
-    const sdf::ElementPtr sdf(new sdf::Element());
+  static sdf::ElementPtr LoadPluginFormat() {
+    const sdf::ElementPtr fmt(new sdf::Element());
     sdf::initFile(
-        ros::package::getPath("gazebo_continuous_track") + "/sdf/continuous_track_plugin.sdf", sdf);
-    return sdf;
+        ros::package::getPath("gazebo_continuous_track") + "/sdf/continuous_track_plugin.sdf", fmt);
+    return fmt;
   }
 
   // merge the plugin format sdf and the given sdf.
   // assert if the given sdf does not match the format
   // (ex. no required element, value type mismatch, ...).
-  static void AssertPluginSDF(const sdf::ElementPtr &_sdf) {
-    static const sdf::ElementPtr fmt_seed(InitializedPluginSDF());
-    const sdf::ElementPtr fmt(fmt_seed->Clone());
-    sdf::readString("<sdf version='" SDF_VERSION "'>" + _sdf->ToString("") + "</sdf>", fmt);
+  static sdf::ElementPtr ToPluginSDF(const sdf::ElementPtr &_sdf) {
+    static const sdf::ElementPtr fmt(LoadPluginFormat());
+    const sdf::ElementPtr dst(fmt->Clone());
+    sdf::readString("<sdf version='" SDF_VERSION "'>" + _sdf->ToString("") + "</sdf>", dst);
+    return dst;
   }
 };
 } // namespace gazebo
