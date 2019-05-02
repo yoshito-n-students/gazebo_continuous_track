@@ -98,7 +98,7 @@ private:
       };
       std::vector< Segment > segments;
       // circumferential length of track
-      double length;
+      double perimeter;
       std::size_t elements_per_round;
       // index of variant to be enabled
       std::size_t variant_id;
@@ -123,7 +123,7 @@ private:
   Track::Belt ComposeBelt(const Properties::Trajectory &_traj_prop,
                           const Properties::Pattern &_pattern_prop) const {
     Track::Belt belt;
-    ComposeSegments(_traj_prop, _pattern_prop, belt.segments, belt.length);
+    ComposeSegments(_traj_prop, _pattern_prop, belt.segments, belt.perimeter);
     belt.elements_per_round = _pattern_prop.elements_per_round;
     belt.variant_id = 0;
     return belt;
@@ -131,12 +131,12 @@ private:
 
   void ComposeSegments(const Properties::Trajectory &_traj_prop,
                        const Properties::Pattern &_pattern_prop,
-                       std::vector< Track::Belt::Segment > &_segments, double &_length) const {
+                       std::vector< Track::Belt::Segment > &_segments, double &_perimeter) const {
     namespace im = ignition::math;
 
-    // fill fields related to length (_segment.joint_to_track, _segment.length, and _length).
+    // fill fields related to length (_segment.joint_to_track, _segment.length, and _perimeter).
     // this resizes segments.
-    FillSegmentLength(_traj_prop, _segments, _length);
+    FillSegmentLength(_traj_prop, _segments, _perimeter);
 
     // populate base sdfs which segment links/joints will inherit
     const std::vector< sdf::ElementPtr > base_link_sdfs(PopulateBaseSegmentLinkSDFs(_traj_prop));
@@ -146,7 +146,7 @@ private:
     for (std::size_t variant_id = 0; variant_id < _pattern_prop.elements.size(); ++variant_id) {
 
       // separation between adjacent elements
-      const double len_step(_length / _pattern_prop.elements_per_round);
+      const double len_step(_perimeter / _pattern_prop.elements_per_round);
       // length left on the current segment to place elements
       double len_left(-len_step / 2.);
       // length traveled on the current segment
@@ -280,10 +280,10 @@ private:
   }
 
   void FillSegmentLength(const Properties::Trajectory &_traj_prop,
-                         std::vector< Track::Belt::Segment > &_segments, double &_length) const {
+                         std::vector< Track::Belt::Segment > &_segments, double &_perimeter) const {
     namespace im = ignition::math;
 
-    _length = 0.;
+    _perimeter = 0.;
 
     for (const Properties::Trajectory::Segment &segment_prop : _traj_prop.segments) {
       Track::Belt::Segment segment;
@@ -306,7 +306,7 @@ private:
 
       _segments.push_back(segment);
 
-      _length += segment.length;
+      _perimeter += segment.length;
     }
   }
 
@@ -409,7 +409,7 @@ private:
     }
 
     // length which a element is distributed along the track
-    const double len_per_element(track_.belt.length / track_.belt.elements_per_round);
+    const double len_per_element(track_.belt.perimeter / track_.belt.elements_per_round);
 
     // set enabled or disabled for all links.
     // this is because all links have been enabled at the beginning of every world update
@@ -442,7 +442,7 @@ private:
 
   std::size_t CalcVariantId(const double _track_pos) const {
     // length which a element, or a set of unique elements is distributed along the track
-    const double len_per_element(track_.belt.length / track_.belt.elements_per_round);
+    const double len_per_element(track_.belt.perimeter / track_.belt.elements_per_round);
     const double len_per_elements(len_per_element * track_.belt.segments[0].variants.size());
 
     // track pos normalized in [0, len_per_elements)
