@@ -33,8 +33,8 @@
 
     <element name="pattern" required="1">
         <description>The pattern of track shoe</description>
-        <element name="elements_per_round" type="int" default="1" required="1">
-            <description>The number of elements on entire track. Must be positive.</description>
+        <element name="elements_per_round" type="unsigned int" default="1" required="1">
+            <description>The number of elements on entire track. Must be positive. Each element is placed [perimeter_of_track] / [elements_per_round] apart.</description>
         </element>
         <element name="element" required="+">
             <description>An element of track shoe</description>
