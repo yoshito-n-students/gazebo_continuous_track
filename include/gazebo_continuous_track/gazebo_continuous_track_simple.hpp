@@ -23,8 +23,13 @@ public:
     std::cout << "[" << plugin_name << "]:"
               << " Start loading plugin" << std::endl;
 
+#if GAZEBO_MAJOR_VERSION >= 8
     GZ_ASSERT(_model->GetWorld()->Physics()->GetType() == "ode",
               "ContinuousTrack only supports ODE.");
+#else
+    GZ_ASSERT(_model->GetWorld()->GetPhysicsEngine()->GetType() == "ode",
+              "ContinuousTrack only supports ODE.");
+#endif
 
     // assert the given sdf can be parsed as plugin property config
     AssertPluginSDF(_sdf);
@@ -128,7 +133,11 @@ private:
     //   This causes unrealistic behaviours (ex. no acceleration free fall).
 
     // reset segment position
+#if GAZEBO_MAJOR_VERSION >= 8
     segment_joint->SetPosition(0, 0.0, /* preserveWorldVelocity */ true);
+#else
+    segment_joint->SetPosition(0, 0.0);
+#endif
     // set the velocity of track segment according to the sprocket velocity
     // using ODE's joint motors function
     segment_joint->SetParam("fmax", 0, 1e10);
