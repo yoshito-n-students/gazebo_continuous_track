@@ -185,49 +185,39 @@ private:
         std::size_t step_count(0);
         while (len_left >= 0.) {
 
-          // insert <collision> of the element to link sdf
+          // add <collision> of the element to link sdf
           for (std::size_t collision_id = 0;
                collision_id < _pattern_prop.elements[elem_id].collision_sdfs.size();
                ++collision_id) {
-            const sdf::ElementPtr collision_sdf(
-                FormatAsCollisionSDF(_pattern_prop.elements[elem_id].collision_sdfs[collision_id]));
-            // set collision name
-            collision_sdf->GetAttribute("name")->Set(
+            // add new <collision> on the link sdf and copy base values
+            const sdf::ElementPtr collision_elem(link_sdf->AddElement("collision"));
+            collision_elem->Copy(_pattern_prop.elements[elem_id].collision_sdfs[collision_id]);
+            // give <collision> a unique name
+            collision_elem->GetAttribute("name")->Set(
                 "segment" + boost::lexical_cast< std::string >(segm_id) + "_step" +
                 boost::lexical_cast< std::string >(step_count) + "_collision" +
                 boost::lexical_cast< std::string >(collision_id));
-            // set collision pose
-            if (collision_sdf->HasElement("pose")) {
-              const sdf::ElementPtr pose_elem(collision_sdf->GetElement("pose"));
-              const im::Pose3d pose_offset(pose_elem->Get< im::Pose3d >());
-              pose_elem->Set(pose_offset + base_pose);
-            } else {
-              collision_sdf->AddElement("pose")->Set(base_pose);
-            }
-            // insert collision to link sdf
-            link_sdf->InsertElement(collision_sdf);
+            // set <collision>/<pose>
+            const sdf::ElementPtr pose_elem(collision_elem->GetElement("pose"));
+            const im::Pose3d pose_offset(pose_elem->Get< im::Pose3d >());
+            pose_elem->Set(pose_offset + base_pose);
           }
 
-          // insert <visual> of the element to link sdf
+          // add <visual> of the element to link sdf
           for (std::size_t visual_id = 0;
                visual_id < _pattern_prop.elements[elem_id].visual_sdfs.size(); ++visual_id) {
-            const sdf::ElementPtr visual_sdf(
-                FormatAsVisualSDF(_pattern_prop.elements[elem_id].visual_sdfs[visual_id]));
-            // set visual name
-            visual_sdf->GetAttribute("name")->Set(
+            // add new <collision> on the link sdf and copy base values
+            const sdf::ElementPtr visual_elem(link_sdf->AddElement("visual"));
+            visual_elem->Copy(_pattern_prop.elements[elem_id].visual_sdfs[visual_id]);
+            // give <visual> a unique name
+            visual_elem->GetAttribute("name")->Set(
                 "segment" + boost::lexical_cast< std::string >(segm_id) + "_step" +
                 boost::lexical_cast< std::string >(step_count) + "_visual" +
                 boost::lexical_cast< std::string >(visual_id));
-            // set visual pose
-            if (visual_sdf->HasElement("pose")) {
-              const sdf::ElementPtr pose_elem(visual_sdf->GetElement("pose"));
-              const im::Pose3d pose_offset(pose_elem->Get< im::Pose3d >());
-              pose_elem->Set(pose_offset + base_pose);
-            } else {
-              visual_sdf->AddElement("pose")->Set(base_pose);
-            }
-            // insert visual to link sdf
-            link_sdf->InsertElement(visual_sdf);
+            // set <visual>/<pose>
+            const sdf::ElementPtr pose_elem(visual_elem->GetElement("pose"));
+            const im::Pose3d pose_offset(pose_elem->Get< im::Pose3d >());
+            pose_elem->Set(pose_offset + base_pose);
           }
 
           // step everything
@@ -248,7 +238,7 @@ private:
           // and does not show up the link correctly on gzclient (gazebo9)
           variant.link =
               base_link->GetModel()->CreateLink(link_sdf->GetAttribute("name")->GetAsString());
-          variant.link->Load(FormatAsLinkSDF(link_sdf));
+          variant.link->Load(link_sdf);
           variant.link->Init();
           // copy base link pose because it may be changed by another plugin loaded before this
           variant.link->SetWorldPose(wrap::WorldPose(base_link));
@@ -261,7 +251,7 @@ private:
               joint_sdf->GetAttribute("name")->GetAsString(),
               joint_sdf->GetAttribute("type")->GetAsString(), base_joint->GetParent(),
               variant.link);
-          variant.joint->Load(FormatAsJointSDF(joint_sdf));
+          variant.joint->Load(joint_sdf);
           variant.joint->Init();
           // set initial zero velocity
           variant.joint->SetParam("fmax", 0, 1e10);
@@ -476,52 +466,6 @@ private:
       visual_publisher_->Publish(*visual_msgs_.front());
       visual_msgs_.pop();
     }
-  }
-
-  // **************
-  // formatting sdf
-  // **************
-
-  // add collision format info to the given sdf element
-  static sdf::ElementPtr FormatAsCollisionSDF(const sdf::ElementPtr &_sdf) {
-    static const sdf::ElementPtr fmt(InitializedSDF("collision.sdf"));
-    return FormatSDF(_sdf, fmt);
-  }
-
-  // add visual format info to the given sdf element
-  static sdf::ElementPtr FormatAsVisualSDF(const sdf::ElementPtr &_sdf) {
-    static const sdf::ElementPtr fmt(InitializedSDF("visual.sdf"));
-    return FormatSDF(_sdf, fmt);
-  }
-
-  // add link format info to the given sdf element
-  static sdf::ElementPtr FormatAsLinkSDF(const sdf::ElementPtr &_sdf) {
-    static const sdf::ElementPtr fmt(InitializedSDF("link.sdf"));
-    return FormatSDF(_sdf, fmt);
-  }
-
-  // add joint format info to the given sdf element
-  static sdf::ElementPtr FormatAsJointSDF(const sdf::ElementPtr &_sdf) {
-    static const sdf::ElementPtr fmt(InitializedSDF("joint.sdf"));
-    return FormatSDF(_sdf, fmt);
-  }
-
-  // get a sdf element which has been initialized by the given format file.
-  // the initialied sdf may look empty but have a format information
-  // (ex. default value for required element).
-  static sdf::ElementPtr InitializedSDF(const std::string &_filename) {
-    const sdf::ElementPtr sdf(new sdf::Element());
-    sdf::initFile(_filename, sdf);
-    return sdf;
-  }
-
-  // merge the format sdf and the given sdf.
-  // assert if the given sdf does not match the format
-  // (ex. no required element, value type mismatch, ...).
-  static sdf::ElementPtr FormatSDF(const sdf::ElementPtr &_sdf, const sdf::ElementPtr &_fmt) {
-    const sdf::ElementPtr dst(_fmt->Clone());
-    sdf::readString("<sdf version='" SDF_VERSION "'>" + _sdf->ToString("") + "</sdf>", dst);
-    return dst;
   }
 
 private:
