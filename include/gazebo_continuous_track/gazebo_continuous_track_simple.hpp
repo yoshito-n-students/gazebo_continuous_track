@@ -8,6 +8,7 @@
 #include <gazebo/common/common.hh>
 #include <gazebo/physics/physics.hh>
 
+#include <gazebo_continuous_track/gazebo_wrap.hpp>
 #include <ros/package.h>
 
 #include <boost/bind.hpp>
@@ -23,13 +24,8 @@ public:
     std::cout << "[" << plugin_name << "]:"
               << " Start loading plugin" << std::endl;
 
-#if GAZEBO_MAJOR_VERSION >= 8
-    GZ_ASSERT(_model->GetWorld()->Physics()->GetType() == "ode",
+    GZ_ASSERT(wrap::Physics(_model->GetWorld())->GetType() == "ode",
               "ContinuousTrack only supports ODE.");
-#else
-    GZ_ASSERT(_model->GetWorld()->GetPhysicsEngine()->GetType() == "ode",
-              "ContinuousTrack only supports ODE.");
-#endif
 
     // assert the given sdf can be parsed as plugin property config
     AssertPluginSDF(_sdf);

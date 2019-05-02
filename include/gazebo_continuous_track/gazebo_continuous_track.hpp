@@ -13,6 +13,7 @@
 #include <gazebo/transport/transport.hh>
 
 #include <gazebo_continuous_track/gazebo_continuous_track_properties.hpp>
+#include <gazebo_continuous_track/gazebo_wrap.hpp>
 #include <ros/package.h>
 
 #include <boost/bind.hpp>
@@ -34,7 +35,7 @@ public:
     std::cout << "[" << plugin_name_ << "]:"
               << " Start loading plugin" << std::endl;
 
-    GZ_ASSERT(_model->GetWorld()->Physics()->GetType() == "ode",
+    GZ_ASSERT(wrap::Physics(_model->GetWorld())->GetType() == "ode",
               "ContinuousTrack only supports ODE.");
 
     // advertise the visual topic to toggle track visuals
@@ -250,7 +251,7 @@ private:
           variant.link->Load(FormatAsLinkSDF(link_sdf));
           variant.link->Init();
           // copy base link pose because it may be changed by another plugin loaded before this
-          variant.link->SetWorldPose(base_link->WorldPose());
+          variant.link->SetWorldPose(wrap::WorldPose(base_link));
 
           // joint
           const physics::JointPtr base_joint(_traj_prop.segments[segm_id].joint);
@@ -289,9 +290,9 @@ private:
 
       if (segment_prop.joint->GetType() & physics::Joint::HINGE_JOINT) {
         // calc radius of rotation (= distance between link position and joint axis)
-        const im::Vector3d joint_pos(segment_prop.joint->WorldPose().Pos());
-        const im::Vector3d joint_axis(segment_prop.joint->GlobalAxis(0));
-        im::Vector3d link_pos(segment_prop.joint->GetChild()->WorldPose().Pos());
+        const im::Vector3d joint_pos(wrap::WorldPose(segment_prop.joint).Pos());
+        const im::Vector3d joint_axis(wrap::GlobalAxis(segment_prop.joint, 0));
+        im::Vector3d link_pos(wrap::WorldPose(segment_prop.joint->GetChild()).Pos());
         // Vector3d::DistToLine() is not a const function for some reason ...
         const double radius(link_pos.DistToLine(joint_pos, joint_pos + joint_axis));
         segment.joint_to_track = radius;
@@ -352,15 +353,15 @@ private:
     // If false, the physics engine may change the world velocity of the child link
     // even if we retrieve the joint position.
 
-    const double current(_joint->Position(0));
+    const double current(wrap::Position(_joint, 0));
     // child position when the joint position is <from>
-    _joint->SetPosition(0, _from, /* preserveWorldVelocity */ true);
-    const im::Pose3d pose_from(_joint->GetChild()->WorldPose());
+    wrap::SetPosition(_joint, 0, _from, /* preserveWorldVelocity */ true);
+    const im::Pose3d pose_from(wrap::WorldPose(_joint->GetChild()));
     // child position when the joint position is <to>
-    _joint->SetPosition(0, _to, true);
-    const im::Pose3d pose_to(_joint->GetChild()->WorldPose());
+    wrap::SetPosition(_joint, 0, _to, true);
+    const im::Pose3d pose_to(wrap::WorldPose(_joint->GetChild()));
     // retrieve the joint position
-    _joint->SetPosition(0, current, true);
+    wrap::SetPosition(_joint, 0, current, true);
 
     return pose_to - pose_from;
   }
@@ -389,7 +390,8 @@ private:
     PublishVisualToggleMsgs();
 
     // state of the track
-    const double track_pos(track_.sprocket.joint->Position(0) * track_.sprocket.joint_to_track);
+    const double track_pos(wrap::Position(track_.sprocket.joint, 0) *
+                           track_.sprocket.joint_to_track);
     const double track_vel(track_.sprocket.joint->GetVelocity(0) * track_.sprocket.joint_to_track);
 
     // new variant id to be enabled
@@ -423,8 +425,8 @@ private:
               track_pos - len_per_element * std::floor(track_pos / len_per_element));
 
           // set position
-          segment.variants[variant_id].joint->SetPosition(
-              0, track_pos_per_element / segment.joint_to_track, true);
+          wrap::SetPosition(segment.variants[variant_id].joint, 0,
+                            track_pos_per_element / segment.joint_to_track, true);
 
           // set the velocity of track segment according to the sprocket velocity
           // using ODE's joint motors function
