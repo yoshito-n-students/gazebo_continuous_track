@@ -129,11 +129,8 @@ private:
     //   This causes unrealistic behaviours (ex. no acceleration free fall).
 
     // reset segment position
-#if GAZEBO_MAJOR_VERSION >= 8
-    segment_joint->SetPosition(0, 0.0, /* preserveWorldVelocity */ true);
-#else
-    segment_joint->SetPosition(0, 0.0);
-#endif
+    wrap::SetPosition(segment_joint, 0, 0.0, /* preserveWorldVelocity */ true);
+
     // set the velocity of track segment according to the sprocket velocity
     // using ODE's joint motors function
     segment_joint->SetParam("fmax", 0, 1e10);
