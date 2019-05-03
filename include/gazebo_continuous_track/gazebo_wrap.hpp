@@ -2,7 +2,6 @@
 #define GAZEBO_WRAP
 
 #include <map>
-#include <queue>
 #include <string>
 
 #include <gazebo/physics/physics.hh>
