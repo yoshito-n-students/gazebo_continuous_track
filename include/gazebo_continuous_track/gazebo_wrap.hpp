@@ -93,14 +93,14 @@ class QueueVisibleMsgsImpl {
   template < Visuals_M physics::Link::*VisualsPtr > friend class QueueVisibleMsgsImplInitializer;
 
 public:
-  static void Call(std::queue< msgs::VisualPtr > &_queue, const physics::LinkPtr &_link,
+  static void Call(std::queue< msgs::VisualPtr > &_visible_msgs, const physics::LinkPtr &_link,
                    const bool _visible) {
     for (const Visuals_M::value_type &visual : (*_link).*visuals_ptr_) {
       msgs::VisualPtr msg(new msgs::Visual());
       msg->set_name(visual.second.name());
       msg->set_parent_name(visual.second.parent_name());
       msg->set_visible(_visible);
-      _queue.push(msg);
+      _visible_msgs.push(msg);
     }
   }
 
@@ -123,16 +123,16 @@ QueueVisibleMsgsImplInitializer< VisualsPtr >
 template class QueueVisibleMsgsImplInitializer< &physics::Link::visuals >;
 #endif
 
-static inline void QueueVisibleMsgs(std::queue< msgs::VisualPtr > &_queue,
+static inline void QueueVisibleMsgs(std::queue< msgs::VisualPtr > &_visible_msgs,
                                     const physics::LinkPtr &_link, const bool _visible) {
 #if GAZEBO_MAJOR_VERSION >= 8
   msgs::VisualPtr msg(new msgs::Visual());
   msg->set_name(_link->GetScopedName());
   msg->set_parent_name(_link->GetModel()->GetScopedName());
   msg->set_visible(_visible);
-  _queue.push(msg);
+  _visible_msgs.push(msg);
 #else
-  QueueVisibleMsgsImpl::Call(_queue, _link, _visible);
+  QueueVisibleMsgsImpl::Call(_visible_msgs, _link, _visible);
 #endif
 }
 

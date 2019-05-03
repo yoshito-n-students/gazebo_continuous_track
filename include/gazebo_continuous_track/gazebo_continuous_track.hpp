@@ -52,7 +52,7 @@ public:
     //  because gzclient does not update visuals before world starts)
     for (const Track::Belt::Segment &segment : track_.belt.segments) {
       for (std::size_t variant_id = 0; variant_id < segment.variants.size(); ++variant_id) {
-        wrap::QueueVisibleMsgs(visual_msgs_, segment.variants[variant_id].link,
+        wrap::QueueVisibleMsgs(visible_msgs_, segment.variants[variant_id].link,
                                variant_id == track_.belt.variant_id);
       }
     }
@@ -377,7 +377,7 @@ private:
 
   void UpdateTrack(const common::UpdateInfo &_info) {
     // enable visuals of the current variant and disable others
-    PublishVisualToggleMsgs();
+    PublishVisibleMsgs();
 
     // state of the track
     const double track_pos(wrap::Position(track_.sprocket.joint, 0) *
@@ -392,8 +392,8 @@ private:
       // (actual publishment is performed at the begging of the next step
       //  because the position of the new variant has not been updated)
       for (const Track::Belt::Segment &segment : track_.belt.segments) {
-        wrap::QueueVisibleMsgs(visual_msgs_, segment.variants[new_variant_id].link, true);
-        wrap::QueueVisibleMsgs(visual_msgs_, segment.variants[track_.belt.variant_id].link, false);
+        wrap::QueueVisibleMsgs(visible_msgs_, segment.variants[new_variant_id].link, true);
+        wrap::QueueVisibleMsgs(visible_msgs_, segment.variants[track_.belt.variant_id].link, false);
       }
       track_.belt.variant_id = new_variant_id;
     }
@@ -456,10 +456,10 @@ private:
   // ** moved to gazebo_wrap.hpp **
   // void QueueVisibleMsgs(const physics::LinkPtr &_link, const bool _visible);
 
-  void PublishVisualToggleMsgs() {
-    while (!visual_msgs_.empty()) {
-      visual_publisher_->Publish(*visual_msgs_.front());
-      visual_msgs_.pop();
+  void PublishVisibleMsgs() {
+    while (!visible_msgs_.empty()) {
+      visual_publisher_->Publish(*visible_msgs_.front());
+      visible_msgs_.pop();
     }
   }
 
@@ -469,7 +469,7 @@ private:
   // transport to toggling track visuals
   transport::NodePtr node_;
   transport::PublisherPtr visual_publisher_;
-  std::queue< msgs::VisualPtr > visual_msgs_;
+  std::queue< msgs::VisualPtr > visible_msgs_;
   // the track model
   Track track_;
   // callback connection handle
