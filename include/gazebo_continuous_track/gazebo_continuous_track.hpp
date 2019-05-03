@@ -52,8 +52,8 @@ public:
     //  because gzclient does not update visuals before world starts)
     for (const Track::Belt::Segment &segment : track_.belt.segments) {
       for (std::size_t variant_id = 0; variant_id < segment.variants.size(); ++variant_id) {
-        QueueVisualToggleMsg(segment.variants[variant_id].link,
-                             variant_id == track_.belt.variant_id);
+        wrap::QueueVisibleMsgs(visual_msgs_, segment.variants[variant_id].link,
+                               variant_id == track_.belt.variant_id);
       }
     }
 
@@ -236,8 +236,8 @@ private:
           const physics::LinkPtr base_link(_traj_prop.segments[segm_id].joint->GetChild());
           // Physics()->CreateLink() does not register a new link to the model
           // and does not show up the link correctly on gzclient (gazebo9)
-          variant.link =
-              base_link->GetModel()->CreateLink(link_sdf->GetAttribute("name")->GetAsString());
+          variant.link = wrap::CreateLink(base_link->GetModel(),
+                                          link_sdf->GetAttribute("name")->GetAsString());
           variant.link->Load(link_sdf);
           variant.link->Init();
           // copy base link pose because it may be changed by another plugin loaded before this
@@ -392,8 +392,8 @@ private:
       // (actual publishment is performed at the begging of the next step
       //  because the position of the new variant has not been updated)
       for (const Track::Belt::Segment &segment : track_.belt.segments) {
-        QueueVisualToggleMsg(segment.variants[new_variant_id].link, true);
-        QueueVisualToggleMsg(segment.variants[track_.belt.variant_id].link, false);
+        wrap::QueueVisibleMsgs(visual_msgs_, segment.variants[new_variant_id].link, true);
+        wrap::QueueVisibleMsgs(visual_msgs_, segment.variants[track_.belt.variant_id].link, false);
       }
       track_.belt.variant_id = new_variant_id;
     }
@@ -449,17 +449,12 @@ private:
 
   void InitVisualPublisher(const physics::ModelPtr &_model) {
     node_.reset(new transport::Node());
-    node_->Init(_model->GetWorld()->Name());
+    node_->Init(wrap::Name(_model->GetWorld()));
     visual_publisher_ = node_->Advertise< msgs::Visual >("~/visual");
   }
 
-  void QueueVisualToggleMsg(const physics::LinkPtr &_link, const bool _visible) {
-    msgs::VisualPtr msg(new msgs::Visual());
-    msg->set_name(_link->GetScopedName());
-    msg->set_parent_name(_link->GetModel()->GetScopedName());
-    msg->set_visible(_visible);
-    visual_msgs_.push(msg);
-  }
+  // ** moved to gazebo_wrap.hpp **
+  // void QueueVisibleMsgs(const physics::LinkPtr &_link, const bool _visible);
 
   void PublishVisualToggleMsgs() {
     while (!visual_msgs_.empty()) {
