@@ -25,7 +25,7 @@ public:
               << " Start loading plugin" << std::endl;
 
     GZ_ASSERT(wrap::Physics(_model->GetWorld())->GetType() == "ode",
-              "ContinuousTrack only supports ODE.");
+              "ContinuousTrackSimple only supports ODE.");
 
     // assert the given sdf can be parsed as plugin property config
     AssertPluginSDF(_sdf);
