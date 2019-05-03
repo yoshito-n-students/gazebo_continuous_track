@@ -47,21 +47,26 @@ static inline physics::PhysicsEnginePtr Physics(const physics::WorldPtr &_world)
 typedef physics::Link_V physics::Model::*LinksPtrT;
 
 // actual implementation of CreateLink().
-// The member variable links_ptr_ is initialized to &Model::links
+// The member variable StaticVar<>::value_ is initialized to &Model::links
 // by CreateLinkImplInitializer.
 class CreateLinkImpl : private StaticVar< LinksPtrT > {
   template < LinksPtrT LinksPtr > friend class CreateLinkImplInitializer;
 
 public:
   static physics::LinkPtr Call(const physics::ModelPtr &_model, const std::string &_name) {
+    // create a named link
     const physics::LinkPtr link(_model->GetWorld()->GetPhysicsEngine()->CreateLink(_model));
     link->SetName(_name);
+
+    // add the new link to the private cache of the model.
+    // this cannot be performed without accessing the private variable in gazebo 7.0 .
     ((*_model).*StaticVar< LinksPtrT >::value_).push_back(link);
+
     return link;
   }
 };
 
-// the constructor initializes CreateLinkImpl::links_ptr_ according to the template variable.
+// the constructor initializes CreateLinkImpl::StaticVar<>::value_ according to the template variable.
 template < LinksPtrT LinksPtr > class CreateLinkImplInitializer {
 public:
   CreateLinkImplInitializer() { CreateLinkImpl::StaticVar< LinksPtrT >::value_ = LinksPtr; }
@@ -74,7 +79,7 @@ CreateLinkImplInitializer< LinksPtr > CreateLinkImplInitializer< LinksPtr >::ins
 
 // instantiate Initializer with &Model::links.
 // this calls the constructor of Initializer,
-// and it initializes CreateLinkImpl::link_ptr_ to &Model::links
+// and it initializes CreateLinkImpl::StaticVar<>::value_ to &Model::links
 template class CreateLinkImplInitializer< &physics::Model::links >;
 #endif
 
