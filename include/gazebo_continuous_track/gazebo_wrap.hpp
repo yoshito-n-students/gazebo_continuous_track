@@ -86,56 +86,6 @@ static inline physics::LinkPtr CreateLink(const physics::ModelPtr &_model,
 // Link
 // ****
 
-#if GAZEBO_MAJOR_VERSION < 8
-typedef std::map< uint32_t, msgs::Visual > Visuals_M;
-
-class QueueVisibleMsgsImpl {
-  template < Visuals_M physics::Link::*VisualsPtr > friend class QueueVisibleMsgsImplInitializer;
-
-public:
-  static void Call(std::queue< msgs::VisualPtr > &_visible_msgs, const physics::LinkPtr &_link,
-                   const bool _visible) {
-    for (const Visuals_M::value_type &visual : (*_link).*visuals_ptr_) {
-      msgs::VisualPtr msg(new msgs::Visual());
-      msg->set_name(visual.second.name());
-      msg->set_parent_name(visual.second.parent_name());
-      msg->set_visible(_visible);
-      _visible_msgs.push(msg);
-    }
-  }
-
-private:
-  static Visuals_M physics::Link::*visuals_ptr_;
-};
-Visuals_M physics::Link::*QueueVisibleMsgsImpl::visuals_ptr_;
-
-template < Visuals_M physics::Link::*VisualsPtr > class QueueVisibleMsgsImplInitializer {
-public:
-  QueueVisibleMsgsImplInitializer() { QueueVisibleMsgsImpl::visuals_ptr_ = VisualsPtr; }
-
-private:
-  static QueueVisibleMsgsImplInitializer instance_;
-};
-template < Visuals_M physics::Link::*VisualsPtr >
-QueueVisibleMsgsImplInitializer< VisualsPtr >
-    QueueVisibleMsgsImplInitializer< VisualsPtr >::instance_;
-
-template class QueueVisibleMsgsImplInitializer< &physics::Link::visuals >;
-#endif
-
-static inline void QueueVisibleMsgs(std::queue< msgs::VisualPtr > &_visible_msgs,
-                                    const physics::LinkPtr &_link, const bool _visible) {
-#if GAZEBO_MAJOR_VERSION >= 8
-  msgs::VisualPtr msg(new msgs::Visual());
-  msg->set_name(_link->GetScopedName());
-  msg->set_parent_name(_link->GetModel()->GetScopedName());
-  msg->set_visible(_visible);
-  _visible_msgs.push(msg);
-#else
-  QueueVisibleMsgsImpl::Call(_visible_msgs, _link, _visible);
-#endif
-}
-
 static inline ignition::math::Pose3d WorldPose(const physics::LinkPtr &_link) {
 #if GAZEBO_MAJOR_VERSION >= 8
   return _link->WorldPose();
@@ -165,21 +115,72 @@ static inline double Position(const physics::JointPtr &_joint, const unsigned in
 #endif
 }
 
+#if GAZEBO_MAJOR_VERSION < 8
+typedef math::Pose (physics::Joint::*ComputeChildLinkPosePtrT)(unsigned int, double);
+typedef bool (physics::Joint ::*FindAllConnectedLinksPtrT)(const physics::LinkPtr &,
+                                                           physics::Link_V &);
+
+class SetPositionImpl {
+  template < ComputeChildLinkPosePtrT ComputeChildLinkPosePtr,
+             FindAllConnectedLinksPtrT FindAllConnectedLinksPtr >
+  friend class SetPositionImplInitializer;
+
+public:
+  static bool Call(const physics::JointPtr &_joint, const unsigned int _index,
+                   const double _position, const bool _preserveWorldVelocity) {
+    if (_preserveWorldVelocity) {
+      // child link's current pose & new pose based on position change
+      const math::Pose child_pose(_joint->GetChild()->GetWorldPose());
+      const math::Pose new_child_pose(((*_joint).*computeChildLinkPosePtr_)(_index, _position));
+
+      // update all connected links
+      physics::Link_V links;
+      ((*_joint).*findAllConnectedLinksPtr_)(_joint->GetParent(), links);
+      for (const physics::LinkPtr &link : links) {
+        // NEVER EVER call Link::MoveFrame(child_pose, new_child_pose)
+        // because a critical bug which zeros link world velocity exists
+        link->SetWorldPose((link->GetWorldPose() - child_pose) + new_child_pose);
+      }
+      return true;
+    } else {
+      return _joint->SetPosition(_index, _position);
+    }
+  }
+
+private:
+  static ComputeChildLinkPosePtrT computeChildLinkPosePtr_;
+  static FindAllConnectedLinksPtrT findAllConnectedLinksPtr_;
+};
+ComputeChildLinkPosePtrT SetPositionImpl::computeChildLinkPosePtr_;
+FindAllConnectedLinksPtrT SetPositionImpl::findAllConnectedLinksPtr_;
+
+template < ComputeChildLinkPosePtrT ComputeChildLinkPosePtr,
+           FindAllConnectedLinksPtrT FindAllConnectedLinksPtr >
+class SetPositionImplInitializer {
+public:
+  SetPositionImplInitializer() {
+    SetPositionImpl::computeChildLinkPosePtr_ = ComputeChildLinkPosePtr;
+    SetPositionImpl::findAllConnectedLinksPtr_ = FindAllConnectedLinksPtr;
+  }
+
+private:
+  static SetPositionImplInitializer instance_;
+};
+template < ComputeChildLinkPosePtrT ComputeChildLinkPosePtr,
+           FindAllConnectedLinksPtrT FindAllConnectedLinksPtr >
+SetPositionImplInitializer< ComputeChildLinkPosePtr, FindAllConnectedLinksPtr >
+    SetPositionImplInitializer< ComputeChildLinkPosePtr, FindAllConnectedLinksPtr >::instance_;
+
+template class SetPositionImplInitializer< &physics::Joint::ComputeChildLinkPose,
+                                           &physics::Joint::FindAllConnectedLinks >;
+#endif
+
 static inline bool SetPosition(const physics::JointPtr &_joint, const unsigned int _index,
                                const double _position, const bool _preserveWorldVelocity = false) {
 #if GAZEBO_MAJOR_VERSION >= 8
   return _joint->SetPosition(_index, _position, _preserveWorldVelocity);
 #else
-  if (_preserveWorldVelocity) {
-    const physics::LinkPtr child(_joint->GetChild());
-    const math::Vector3 child_lin_vel(child->GetWorldLinearVel());
-    const math::Vector3 child_ang_vel(child->GetWorldAngularVel());
-    const bool result(_joint->SetPosition(_index, _position));
-    child->SetWorldTwist(child_lin_vel, child_ang_vel);
-    return result;
-  } else {
-    return _joint->SetPosition(_index, _position);
-  }
+  return SetPositionImpl::Call(_joint, _index, _position, _preserveWorldVelocity);
 #endif
 }
 

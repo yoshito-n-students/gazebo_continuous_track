@@ -52,8 +52,7 @@ public:
     //  because gzclient does not update visuals before world starts)
     for (const Track::Belt::Segment &segment : track_.belt.segments) {
       for (std::size_t variant_id = 0; variant_id < segment.variants.size(); ++variant_id) {
-        wrap::QueueVisibleMsgs(visible_msgs_, segment.variants[variant_id].link,
-                               variant_id == track_.belt.variant_id);
+        QueueVisibleMsgs(segment.variants[variant_id].link, variant_id == track_.belt.variant_id);
       }
     }
 
@@ -392,8 +391,8 @@ private:
       // (actual publishment is performed at the begging of the next step
       //  because the position of the new variant has not been updated)
       for (const Track::Belt::Segment &segment : track_.belt.segments) {
-        wrap::QueueVisibleMsgs(visible_msgs_, segment.variants[new_variant_id].link, true);
-        wrap::QueueVisibleMsgs(visible_msgs_, segment.variants[track_.belt.variant_id].link, false);
+        QueueVisibleMsgs(segment.variants[new_variant_id].link, true);
+        QueueVisibleMsgs(segment.variants[track_.belt.variant_id].link, false);
       }
       track_.belt.variant_id = new_variant_id;
     }
@@ -453,8 +452,13 @@ private:
     visual_publisher_ = node_->Advertise< msgs::Visual >("~/visual");
   }
 
-  // ** moved to gazebo_wrap.hpp **
-  // void QueueVisibleMsgs(const physics::LinkPtr &_link, const bool _visible);
+  void QueueVisibleMsgs(const physics::LinkPtr &_link, const bool _visible) {
+    msgs::VisualPtr msg(new msgs::Visual());
+    msg->set_name(_link->GetScopedName());
+    msg->set_parent_name(_link->GetModel()->GetScopedName());
+    msg->set_visible(_visible);
+    visible_msgs_.push(msg);
+  }
 
   void PublishVisibleMsgs() {
     while (!visible_msgs_.empty()) {
