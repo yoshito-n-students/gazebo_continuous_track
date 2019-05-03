@@ -9,6 +9,13 @@
 namespace gazebo {
 namespace wrap {
 
+#if GAZEBO_MAJOR_VERSION < 8
+// utility to append a static member variable for a non-templated class
+// without defining the static member in .cpp file
+template < typename T > struct StaticVar { static T value_; };
+template < typename T > T StaticVar< T >::value_;
+#endif
+
 // *****
 // World
 // *****
@@ -36,34 +43,33 @@ static inline physics::PhysicsEnginePtr Physics(const physics::WorldPtr &_world)
 #if GAZEBO_MAJOR_VERSION < 8
 // magic to access physics::Model::links which is a private member variable.
 
+// pointer type of the private member we want to access
+typedef physics::Link_V physics::Model::*LinksPtrT;
+
 // actual implementation of CreateLink().
 // The member variable links_ptr_ is initialized to &Model::links
 // by CreateLinkImplInitializer.
-class CreateLinkImpl {
-  template < physics::Link_V physics::Model::*LinksPtr > friend class CreateLinkImplInitializer;
+class CreateLinkImpl : private StaticVar< LinksPtrT > {
+  template < LinksPtrT LinksPtr > friend class CreateLinkImplInitializer;
 
 public:
   static physics::LinkPtr Call(const physics::ModelPtr &_model, const std::string &_name) {
     const physics::LinkPtr link(_model->GetWorld()->GetPhysicsEngine()->CreateLink(_model));
     link->SetName(_name);
-    ((*_model).*links_ptr_).push_back(link);
+    ((*_model).*StaticVar< LinksPtrT >::value_).push_back(link);
     return link;
   }
-
-private:
-  static physics::Link_V physics::Model::*links_ptr_;
 };
-physics::Link_V physics::Model::*CreateLinkImpl::links_ptr_;
 
 // the constructor initializes CreateLinkImpl::links_ptr_ according to the template variable.
-template < physics::Link_V physics::Model::*LinksPtr > class CreateLinkImplInitializer {
+template < LinksPtrT LinksPtr > class CreateLinkImplInitializer {
 public:
-  CreateLinkImplInitializer() { CreateLinkImpl::links_ptr_ = LinksPtr; }
+  CreateLinkImplInitializer() { CreateLinkImpl::StaticVar< LinksPtrT >::value_ = LinksPtr; }
 
 private:
   static CreateLinkImplInitializer instance_;
 };
-template < physics::Link_V physics::Model::*LinksPtr >
+template < LinksPtrT LinksPtr >
 CreateLinkImplInitializer< LinksPtr > CreateLinkImplInitializer< LinksPtr >::instance_;
 
 // instantiate Initializer with &Model::links.
@@ -119,7 +125,8 @@ typedef math::Pose (physics::Joint::*ComputeChildLinkPosePtrT)(unsigned int, dou
 typedef bool (physics::Joint ::*FindAllConnectedLinksPtrT)(const physics::LinkPtr &,
                                                            physics::Link_V &);
 
-class SetPositionImpl {
+class SetPositionImpl : private StaticVar< ComputeChildLinkPosePtrT >,
+                        private StaticVar< FindAllConnectedLinksPtrT > {
   template < ComputeChildLinkPosePtrT ComputeChildLinkPosePtr,
              FindAllConnectedLinksPtrT FindAllConnectedLinksPtr >
   friend class SetPositionImplInitializer;
@@ -130,14 +137,17 @@ public:
     if (_preserveWorldVelocity) {
       // child link's current pose & new pose based on position change
       const math::Pose child_pose(_joint->GetChild()->GetWorldPose());
-      const math::Pose new_child_pose(((*_joint).*computeChildLinkPosePtr_)(_index, _position));
+      const math::Pose new_child_pose(
+          ((*_joint).*StaticVar< ComputeChildLinkPosePtrT >::value_)(_index, _position));
 
-      // update all connected links
+      // populate child links recursively
       physics::Link_V links;
-      ((*_joint).*findAllConnectedLinksPtr_)(_joint->GetParent(), links);
+      ((*_joint).*StaticVar< FindAllConnectedLinksPtrT >::value_)(_joint->GetParent(), links);
+
+      // update pose of each child link on the basis of joint position change
       for (const physics::LinkPtr &link : links) {
         // NEVER EVER call Link::MoveFrame(child_pose, new_child_pose)
-        // because a critical bug which zeros link world velocity exists
+        // because there is a critical bug which zeros link world velocity
         link->SetWorldPose((link->GetWorldPose() - child_pose) + new_child_pose);
       }
       return true;
@@ -145,21 +155,15 @@ public:
       return _joint->SetPosition(_index, _position);
     }
   }
-
-private:
-  static ComputeChildLinkPosePtrT computeChildLinkPosePtr_;
-  static FindAllConnectedLinksPtrT findAllConnectedLinksPtr_;
 };
-ComputeChildLinkPosePtrT SetPositionImpl::computeChildLinkPosePtr_;
-FindAllConnectedLinksPtrT SetPositionImpl::findAllConnectedLinksPtr_;
 
 template < ComputeChildLinkPosePtrT ComputeChildLinkPosePtr,
            FindAllConnectedLinksPtrT FindAllConnectedLinksPtr >
 class SetPositionImplInitializer {
 public:
   SetPositionImplInitializer() {
-    SetPositionImpl::computeChildLinkPosePtr_ = ComputeChildLinkPosePtr;
-    SetPositionImpl::findAllConnectedLinksPtr_ = FindAllConnectedLinksPtr;
+    SetPositionImpl::StaticVar< ComputeChildLinkPosePtrT >::value_ = ComputeChildLinkPosePtr;
+    SetPositionImpl::StaticVar< FindAllConnectedLinksPtrT >::value_ = FindAllConnectedLinksPtr;
   }
 
 private:
