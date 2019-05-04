@@ -73,6 +73,8 @@ private:
 
     // [pitch_diameter]
     sprocket.pitch_diameter = _sdf->GetElement("pitch_diameter")->Get< double >();
+    GZ_ASSERT(sprocket.pitch_diameter > 0.,
+              "[sprocket]::[pitch_diameter] must be a positive real number");
 
     return sprocket;
   }
@@ -98,7 +100,7 @@ private:
       // []::[end_position]
       segment.end_position = segment_elem->GetElement("end_position")->Get< double >();
       GZ_ASSERT(segment.end_position > 0.,
-                "[trajectory]::[segment]::[end_position] must be positive real number");
+                "[trajectory]::[segment]::[end_position] must be a positive real number");
 
       trajectory.segments.push_back(segment);
     }

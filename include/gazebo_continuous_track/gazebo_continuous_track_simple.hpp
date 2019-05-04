@@ -45,6 +45,8 @@ public:
                 << std::endl;
       // [pitch_diameter]
       sprocket_diameter = sprocket_elem->GetElement("pitch_diameter")->Get< double >();
+      GZ_ASSERT(sprocket_diameter > 0.,
+                "[sprocket]::[pitch_diameter] must be a positive real number");
       std::cout << "[" << plugin_name << "]:"
                 << " Set the pitch diameter of the sprocket to " << sprocket_diameter << std::endl;
     }
@@ -72,6 +74,8 @@ public:
               "No [track]::[segment]::[pitch_diameter] element for a rotational segment in sdf");
           const double segment_diameter(
               segment_elem->GetElement("pitch_diameter")->Get< double >());
+          GZ_ASSERT(segment_diameter > 0.,
+                    "[track]::[segment]::[pitch_diameter] must be a positive real number");
           segment_updaters_.push_back(boost::bind(&ContinuousTrackSimple::UpdateRotationalSegment,
                                                   segment_joint, _1,
                                                   sprocket_diameter / segment_diameter));
