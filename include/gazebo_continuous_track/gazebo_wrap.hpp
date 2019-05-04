@@ -66,7 +66,8 @@ public:
   }
 };
 
-// the constructor initializes CreateLinkImpl::StaticVar<>::value_ according to the template variable.
+// the constructor initializes CreateLinkImpl::StaticVar<>::value_ according to the template
+// variable.
 template < LinksPtrT LinksPtr > class CreateLinkImplInitializer {
 public:
   CreateLinkImplInitializer() { CreateLinkImpl::StaticVar< LinksPtrT >::value_ = LinksPtr; }
@@ -137,8 +138,17 @@ class SetPositionImpl : private StaticVar< ComputeChildLinkPosePtrT >,
   friend class SetPositionImplInitializer;
 
 public:
-  static bool Call(const physics::JointPtr &_joint, const unsigned int _index,
-                   const double _position, const bool _preserveWorldVelocity) {
+  static bool Call(const physics::JointPtr &_joint, const unsigned int _index, double _position,
+                   const bool _preserveWorldVelocity) {
+    {
+      // limit desired position
+      const double lower_limit(*(_joint->GetLowerLimit(_index)));
+      const double upper_limit(*(_joint->GetUpperLimit(_index)));
+      _position = lower_limit < upper_limit
+                      ? ignition::math::clamp(_position, lower_limit, upper_limit)
+                      : ignition::math::clamp(_position, upper_limit, lower_limit);
+    }
+
     if (_preserveWorldVelocity) {
       // child link's current pose & new pose based on position change
       const math::Pose child_pose(_joint->GetChild()->GetWorldPose());
