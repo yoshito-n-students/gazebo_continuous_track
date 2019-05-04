@@ -412,9 +412,10 @@ private:
           // enable the link (should happen nothing but just in case)
           segment.variants[variant_id].link->SetEnabled(true);
 
-          // track pos normalized in [0, len_per_element)
+          // track pos normalized in [-len_per_element / 2, len_per_element / 2)
           const double track_pos_per_element(
-              track_pos - len_per_element * std::floor(track_pos / len_per_element));
+              track_pos - len_per_element * std::floor(track_pos / len_per_element) -
+              len_per_element / 2.);
 
           // set position
           wrap::SetPosition(segment.variants[variant_id].joint, 0,
