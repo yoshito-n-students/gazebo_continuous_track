@@ -38,7 +38,7 @@ public:
       sprocket_joint_ = _model->GetJoint(sprocket_elem->GetElement("joint")->Get< std::string >());
       GZ_ASSERT(sprocket_joint_,
                 "Cannot find a joint with the value of [sprocket]::[joint] element in sdf");
-      GZ_ASSERT(sprocket_joint_->GetType() & physics::Joint::HINGE_JOINT,
+      GZ_ASSERT(sprocket_joint_->HasType(physics::Joint::HINGE_JOINT),
                 "[sprocket]::[joint] must be a rotatinal joint");
       std::cout << "[" << plugin_name << "]:"
                 << " Found the sprocket joint \"" << sprocket_joint_->GetScopedName() << "\""
@@ -67,8 +67,7 @@ public:
                   << " Found the joint \"" << segment_joint->GetScopedName()
                   << "\" for a track segment" << std::endl;
         // [pitch_diameter] (for rotational joint only)
-        const unsigned int segment_type(segment_joint->GetType());
-        if (segment_type & physics::Joint::HINGE_JOINT) {
+        if (segment_joint->HasType(physics::Joint::HINGE_JOINT)) {
           GZ_ASSERT(
               segment_elem->HasElement("pitch_diameter"),
               "No [track]::[segment]::[pitch_diameter] element for a rotational segment in sdf");
@@ -82,7 +81,7 @@ public:
           std::cout << "[" << plugin_name << "]:"
                     << " Set the pitch diameter for the track segment \""
                     << segment_joint->GetScopedName() << "\" to " << segment_diameter << std::endl;
-        } else if (segment_type & physics::Joint::SLIDER_JOINT) {
+        } else if (segment_joint->HasType(physics::Joint::SLIDER_JOINT)) {
           segment_updaters_.push_back(
               boost::bind(&ContinuousTrackSimple::UpdateTranslationalSegment, segment_joint, _1,
                           sprocket_diameter / 2));

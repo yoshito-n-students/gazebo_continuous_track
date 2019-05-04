@@ -68,7 +68,7 @@ private:
     sprocket.joint = _model->GetJoint(_sdf->GetElement("joint")->Get< std::string >());
     GZ_ASSERT(sprocket.joint,
               "Cannot find a joint with the value of [sprocket]::[joint] element in sdf");
-    GZ_ASSERT(sprocket.joint->GetType() & physics::Joint::HINGE_JOINT,
+    GZ_ASSERT(sprocket.joint->HasType(physics::Joint::HINGE_JOINT),
               "[sprocket]::[joint] must be a rotatinal joint");
 
     // [pitch_diameter]
@@ -93,8 +93,8 @@ private:
       segment.joint = _model->GetJoint(segment_elem->GetElement("joint")->Get< std::string >());
       GZ_ASSERT(segment.joint, "Cannot find a joint with the value of "
                                "[trajectory]::[segment]::[joint] element in sdf");
-      GZ_ASSERT(segment.joint->GetType() & physics::Joint::HINGE_JOINT ||
-                    segment.joint->GetType() & physics::Joint::SLIDER_JOINT,
+      GZ_ASSERT(segment.joint->HasType(physics::Joint::HINGE_JOINT) ||
+                    segment.joint->HasType(physics::Joint::SLIDER_JOINT),
                 "[trajectory]::[segment]::[joint] must be a rotatinal or translational joint");
 
       // []::[end_position]

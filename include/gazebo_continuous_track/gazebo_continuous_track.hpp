@@ -277,7 +277,7 @@ private:
     for (const Properties::Trajectory::Segment &segment_prop : _traj_prop.segments) {
       Track::Belt::Segment segment;
 
-      if (segment_prop.joint->GetType() & physics::Joint::HINGE_JOINT) {
+      if (segment_prop.joint->HasType(physics::Joint::HINGE_JOINT)) {
         // calc radius of rotation (= distance between link position and joint axis)
         const im::Vector3d joint_pos(wrap::WorldPose(segment_prop.joint).Pos());
         const im::Vector3d joint_axis(wrap::GlobalAxis(segment_prop.joint, 0));
@@ -287,7 +287,7 @@ private:
         segment.joint_to_track = radius;
         // length of segment is radius * rotation-angle
         segment.length = radius * segment_prop.end_position;
-      } else if (segment_prop.joint->GetType() & physics::Joint::SLIDER_JOINT) {
+      } else if (segment_prop.joint->HasType(physics::Joint::SLIDER_JOINT)) {
         // length of segment equals to end-position of joint
         segment.joint_to_track = 1.0;
         segment.length = segment_prop.end_position;
