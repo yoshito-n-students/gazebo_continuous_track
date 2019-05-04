@@ -291,6 +291,9 @@ private:
         // length of segment equals to end-position of joint
         segment.joint_to_track = 1.0;
         segment.length = segment_prop.end_position;
+      } else {
+        // never fall here as joint type has been checked in the property loader
+        GZ_ASSERT(false, "Bug. Unexpected joint type.");
       }
 
       _segments.push_back(segment);
