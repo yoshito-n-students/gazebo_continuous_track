@@ -234,7 +234,7 @@ private:
           // link
           const physics::LinkPtr base_link(_traj_prop.segments[segm_id].joint->GetChild());
           // Physics()->CreateLink() does not register a new link to the model
-          // and does not show up the link correctly on gzclient (gazebo9)
+          // and does not show up the link correctly on gzclient (gazebo7&9)
           variant.link = wrap::CreateLink(base_link->GetModel(),
                                           link_sdf->GetAttribute("name")->GetAsString());
           variant.link->Load(link_sdf);
@@ -245,7 +245,7 @@ private:
           // joint
           const physics::JointPtr base_joint(_traj_prop.segments[segm_id].joint);
           // Physics()->CreateJoint() does not register a new joint to the model
-          // and does not show up the joint correctly on gzclient (gazebo9)
+          // and does not show up the joint correctly on gzclient (gazebo7&9)
           variant.joint = base_joint->GetParent()->GetModel()->CreateJoint(
               joint_sdf->GetAttribute("name")->GetAsString(),
               joint_sdf->GetAttribute("type")->GetAsString(), base_joint->GetParent(),
