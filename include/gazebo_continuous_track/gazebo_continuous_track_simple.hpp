@@ -2,6 +2,7 @@
 #define GAZEBO_CONTINUOUS_TRACK_SIMPLE
 
 #include <iostream>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -119,9 +120,7 @@ private:
   static void UpdateRotationalSegment(const physics::JointPtr &segment_joint,
                                       const double sprocket_vel, const double sprocket2segment) {
     // set the velocity of track segment according to the sprocket velocity
-    // using ODE's joint motors function
-    segment_joint->SetParam("fmax", 0, 1e10);
-    segment_joint->SetParam("vel", 0, sprocket_vel * sprocket2segment);
+    SetJointMotorVelocity(segment_joint, 0, sprocket_vel * sprocket2segment);
   }
 
   static void UpdateTranslationalSegment(const physics::JointPtr &segment_joint,
@@ -135,9 +134,26 @@ private:
     wrap::SetPosition(segment_joint, 0, 0.0, /* preserveWorldVelocity */ true);
 
     // set the velocity of track segment according to the sprocket velocity
+    SetJointMotorVelocity(segment_joint, 0, sprocket_vel * sprocket2segment);
+  }
+
+  static void SetJointMotorVelocity(const physics::JointPtr &_joint, const unsigned int _index,
+                                    const double _velocity) {
     // using ODE's joint motors function
-    segment_joint->SetParam("fmax", 0, 1e10);
-    segment_joint->SetParam("vel", 0, sprocket_vel * sprocket2segment);
+
+    // set force/torque limit
+    const double effort_limit(_joint->GetEffortLimit(_index));
+    _joint->SetParam("fmax", _index,
+                     // negative value means unlimited
+                     effort_limit > 0. ? effort_limit : std::numeric_limits< double >::max());
+
+    // set velocity clamped by velocity limit
+    const double velocity_limit(_joint->GetVelocityLimit(_index));
+    _joint->SetParam("vel", 0,
+                     // negative value means unlimited
+                     velocity_limit > 0.
+                         ? ignition::math::clamp(_velocity, -velocity_limit, velocity_limit)
+                         : _velocity);
   }
 
   // **************

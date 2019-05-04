@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <queue>
 #include <string>
 #include <vector>
@@ -253,8 +254,7 @@ private:
           variant.joint->Load(joint_sdf);
           variant.joint->Init();
           // set initial zero velocity
-          variant.joint->SetParam("fmax", 0, 1e10);
-          variant.joint->SetParam("vel", 0, 0.0);
+          SetJointMotorVelocity(variant.joint, 0, 0.);
 
           _segments[segm_id].variants.push_back(variant);
           std::cout << "[" << plugin_name_ << "]:"
@@ -417,15 +417,11 @@ private:
               track_pos - len_per_element * std::floor(track_pos / len_per_element) -
               len_per_element / 2.);
 
-          // set position
+          // set position & velocity
           wrap::SetPosition(segment.variants[variant_id].joint, 0,
                             track_pos_per_element / segment.joint_to_track, true);
-
-          // set the velocity of track segment according to the sprocket velocity
-          // using ODE's joint motors function
-          segment.variants[variant_id].joint->SetParam("fmax", 0, 1e10);
-          segment.variants[variant_id].joint->SetParam("vel", 0,
-                                                       track_vel / segment.joint_to_track);
+          SetJointMotorVelocity(segment.variants[variant_id].joint, 0,
+                                track_vel / segment.joint_to_track);
         } else {
           segment.variants[variant_id].link->SetEnabled(false);
         }
@@ -444,6 +440,25 @@ private:
 
     // new variant id to be enabled
     return static_cast< std::size_t >(std::floor(track_pos_per_elements / len_per_element));
+  }
+
+  void SetJointMotorVelocity(const physics::JointPtr &_joint, const unsigned int _index,
+                             const double _velocity) const {
+    // using ODE's joint motors function
+
+    // set force/torque limit
+    const double effort_limit(_joint->GetEffortLimit(_index));
+    _joint->SetParam("fmax", _index,
+                     // negative value means unlimited
+                     effort_limit > 0. ? effort_limit : std::numeric_limits< double >::max());
+
+    // set velocity clamped by velocity limit
+    const double velocity_limit(_joint->GetVelocityLimit(_index));
+    _joint->SetParam("vel", 0,
+                     // negative value means unlimited
+                     velocity_limit > 0.
+                         ? ignition::math::clamp(_velocity, -velocity_limit, velocity_limit)
+                         : _velocity);
   }
 
   // ****************************
