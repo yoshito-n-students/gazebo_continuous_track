@@ -11,9 +11,11 @@ namespace wrap {
 
 #if GAZEBO_MAJOR_VERSION < 8
 // utility to append a static member variable for a non-templated class
-// without defining the static member in .cpp file
-template < typename T > struct StaticVar { static T value_; };
-template < typename T > T StaticVar< T >::value_;
+// without defining the static member in .cpp file.
+// the template param Derived is required
+// to give different variable instance for each Derived class.
+template < typename T, class Derived > struct StaticVar { static T value_; };
+template < typename T, class Derived > T StaticVar< T, Derived >::value_;
 #endif
 
 // *****
@@ -49,8 +51,9 @@ typedef physics::Link_V physics::Model::*LinksPtrT;
 // actual implementation of CreateLink().
 // The member variable StaticVar<>::value_ is initialized to &Model::links
 // by CreateLinkImplInitializer.
-class CreateLinkImpl : private StaticVar< LinksPtrT > {
+class CreateLinkImpl : private StaticVar< LinksPtrT, CreateLinkImpl > {
   template < LinksPtrT LinksPtr > friend class CreateLinkImplInitializer;
+  typedef StaticVar< LinksPtrT, CreateLinkImpl > LinksPtrVar;
 
 public:
   static physics::LinkPtr Call(const physics::ModelPtr &_model, const std::string &_name) {
@@ -60,7 +63,7 @@ public:
 
     // add the new link to the private cache of the model.
     // this cannot be performed without accessing the private variable in gazebo 7.0 .
-    ((*_model).*StaticVar< LinksPtrT >::value_).push_back(link);
+    ((*_model).*LinksPtrVar::value_).push_back(link);
 
     return link;
   }
@@ -70,7 +73,7 @@ public:
 // variable.
 template < LinksPtrT LinksPtr > class CreateLinkImplInitializer {
 public:
-  CreateLinkImplInitializer() { CreateLinkImpl::StaticVar< LinksPtrT >::value_ = LinksPtr; }
+  CreateLinkImplInitializer() { CreateLinkImpl::LinksPtrVar::value_ = LinksPtr; }
 
 private:
   static CreateLinkImplInitializer instance_;
@@ -131,11 +134,13 @@ typedef math::Pose (physics::Joint::*ComputeChildLinkPosePtrT)(unsigned int, dou
 typedef bool (physics::Joint ::*FindAllConnectedLinksPtrT)(const physics::LinkPtr &,
                                                            physics::Link_V &);
 
-class SetPositionImpl : private StaticVar< ComputeChildLinkPosePtrT >,
-                        private StaticVar< FindAllConnectedLinksPtrT > {
+class SetPositionImpl : private StaticVar< ComputeChildLinkPosePtrT, SetPositionImpl >,
+                        private StaticVar< FindAllConnectedLinksPtrT, SetPositionImpl > {
   template < ComputeChildLinkPosePtrT ComputeChildLinkPosePtr,
              FindAllConnectedLinksPtrT FindAllConnectedLinksPtr >
   friend class SetPositionImplInitializer;
+  typedef StaticVar< ComputeChildLinkPosePtrT, SetPositionImpl > ComputeChildLinkPosePtrVar;
+  typedef StaticVar< FindAllConnectedLinksPtrT, SetPositionImpl > FindAllConnectedLinksPtrVar;
 
 public:
   static bool Call(const physics::JointPtr &_joint, const unsigned int _index, double _position,
@@ -153,11 +158,11 @@ public:
       // child link's current pose & new pose based on position change
       const math::Pose child_pose(_joint->GetChild()->GetWorldPose());
       const math::Pose new_child_pose(
-          ((*_joint).*StaticVar< ComputeChildLinkPosePtrT >::value_)(_index, _position));
+          ((*_joint).*ComputeChildLinkPosePtrVar::value_)(_index, _position));
 
       // populate child links recursively
       physics::Link_V links;
-      ((*_joint).*StaticVar< FindAllConnectedLinksPtrT >::value_)(_joint->GetParent(), links);
+      ((*_joint).*FindAllConnectedLinksPtrVar::value_)(_joint->GetParent(), links);
 
       // update pose of each child link on the basis of joint position change
       for (const physics::LinkPtr &link : links) {
@@ -177,8 +182,8 @@ template < ComputeChildLinkPosePtrT ComputeChildLinkPosePtr,
 class SetPositionImplInitializer {
 public:
   SetPositionImplInitializer() {
-    SetPositionImpl::StaticVar< ComputeChildLinkPosePtrT >::value_ = ComputeChildLinkPosePtr;
-    SetPositionImpl::StaticVar< FindAllConnectedLinksPtrT >::value_ = FindAllConnectedLinksPtr;
+    SetPositionImpl::ComputeChildLinkPosePtrVar::value_ = ComputeChildLinkPosePtr;
+    SetPositionImpl::FindAllConnectedLinksPtrVar::value_ = FindAllConnectedLinksPtr;
   }
 
 private:
