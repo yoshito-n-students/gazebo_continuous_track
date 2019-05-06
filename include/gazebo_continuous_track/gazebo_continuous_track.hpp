@@ -194,8 +194,7 @@ private:
             collision_elem->Copy(_pattern_prop.elements[elem_id].collision_sdfs[collision_id]);
             // give <collision> a unique name
             collision_elem->GetAttribute("name")->Set(
-                "segment" + boost::lexical_cast< std::string >(segm_id) + "_step" +
-                boost::lexical_cast< std::string >(step_count) + "_collision" +
+                "step" + boost::lexical_cast< std::string >(step_count) + "_collision" +
                 boost::lexical_cast< std::string >(collision_id));
             // set <collision>/<pose>
             const sdf::ElementPtr pose_elem(collision_elem->GetElement("pose"));
@@ -211,8 +210,7 @@ private:
             visual_elem->Copy(_pattern_prop.elements[elem_id].visual_sdfs[visual_id]);
             // give <visual> a unique name
             visual_elem->GetAttribute("name")->Set(
-                "segment" + boost::lexical_cast< std::string >(segm_id) + "_step" +
-                boost::lexical_cast< std::string >(step_count) + "_visual" +
+                "step" + boost::lexical_cast< std::string >(step_count) + "_visual" +
                 boost::lexical_cast< std::string >(visual_id));
             // set <visual>/<pose>
             const sdf::ElementPtr pose_elem(visual_elem->GetElement("pose"));
