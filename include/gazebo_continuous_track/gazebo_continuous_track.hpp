@@ -402,6 +402,10 @@ private:
 
     // length which a element is distributed along the track
     const double len_per_element(track_.belt.perimeter / track_.belt.elements_per_round);
+    // track pos normalized in [-len_per_element / 2, len_per_element / 2)
+    const double track_pos_per_element(track_pos -
+                                       len_per_element * std::floor(track_pos / len_per_element) -
+                                       len_per_element / 2.);
 
     // set enabled or disabled for all links.
     // this is because all links have been enabled at the beginning of every world update
@@ -411,11 +415,6 @@ private:
         if (variant_id == track_.belt.variant_id) {
           // enable the link (should happen nothing but just in case)
           segment.variants[variant_id].link->SetEnabled(true);
-
-          // track pos normalized in [-len_per_element / 2, len_per_element / 2)
-          const double track_pos_per_element(
-              track_pos - len_per_element * std::floor(track_pos / len_per_element) -
-              len_per_element / 2.);
 
           // set position & velocity
           wrap::SetPosition(segment.variants[variant_id].joint, 0,
