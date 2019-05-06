@@ -108,8 +108,8 @@
 
     <!-- macros for populating general links/joints -->
 
-    <xacro:macro name="populate_links" params="name_prefix:=^ x:=^|0 y:=^|0 z:=^|0 roll:=^|0 pitch:=^|0 yaw:=^|0 dx:=^|0 dy:=^|0 dz:=^|0 droll:=^|0 dpitch:=^|0 dyaw:=^|0 i:=1 count:=^ **template">
-        <xacro:if value="${i &lt;= count}">
+    <xacro:macro name="populate_links" params="name_prefix:=^ x:=^|0 y:=^|0 z:=^|0 roll:=^|0 pitch:=^|0 yaw:=^|0 dx:=^|0 dy:=^|0 dz:=^|0 droll:=^|0 dpitch:=^|0 dyaw:=^|0 i:=0 count:=^ **template">
+        <xacro:if value="${i &lt; count}">
             <gazebo>
                 <link name="${name_prefix}${i}">
                     <pose>${x} ${y} ${z} ${roll} ${pitch} ${yaw}</pose>
@@ -124,8 +124,8 @@
         </xacro:if>
     </xacro:macro>
 
-    <xacro:macro name="populate_joints" params="name_prefix:=^ type:=^ child_prefix:=^ i:=1 count:=^ **template">
-        <xacro:if value="${i &lt;= count}">
+    <xacro:macro name="populate_joints" params="name_prefix:=^ type:=^ child_prefix:=^ i:=0 count:=^ **template">
+        <xacro:if value="${i &lt; count}">
             <gazebo>
                 <joint name="${name_prefix}${i}" type="${type}">
                     <child>${child_prefix}${i}</child>

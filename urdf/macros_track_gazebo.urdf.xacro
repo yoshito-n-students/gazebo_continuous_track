@@ -84,19 +84,19 @@
                 </sprocket>
                 <trajectory>
                     <segment>
+                        <joint>${name}_straight_segment_joint0</joint>
+                        <end_position>${length}</end_position>
+                    </segment>
+                    <segment>
+                        <joint>${name}_arc_segment_joint0</joint>
+                        <end_position>${pi}</end_position>
+                    </segment>
+                    <segment>
                         <joint>${name}_straight_segment_joint1</joint>
                         <end_position>${length}</end_position>
                     </segment>
                     <segment>
                         <joint>${name}_arc_segment_joint1</joint>
-                        <end_position>${pi}</end_position>
-                    </segment>
-                    <segment>
-                        <joint>${name}_straight_segment_joint2</joint>
-                        <end_position>${length}</end_position>
-                    </segment>
-                    <segment>
-                        <joint>${name}_arc_segment_joint2</joint>
                         <end_position>${pi}</end_position>
                     </segment>
                 </trajectory>
