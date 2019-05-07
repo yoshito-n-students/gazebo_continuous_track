@@ -234,8 +234,8 @@ private:
           const physics::LinkPtr base_link(_traj_prop.segments[segm_id].joint->GetChild());
           // Physics()->CreateLink() does not register a new link to the model
           // and does not show up the link correctly on gzclient (gazebo7&9)
-          variant.link = wrap::CreateLink(base_link->GetModel(),
-                                          link_sdf->GetAttribute("name")->GetAsString());
+          variant.link =
+              base_link->GetModel()->CreateLink(link_sdf->GetAttribute("name")->GetAsString());
           variant.link->Load(link_sdf);
           variant.link->Init();
           // copy base link pose because it may be changed by another plugin loaded before this

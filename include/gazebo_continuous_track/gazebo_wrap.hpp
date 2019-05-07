@@ -9,13 +9,8 @@
 namespace gazebo {
 namespace wrap {
 
-#if GAZEBO_MAJOR_VERSION < 8
-// utility to append a static member variable for a non-templated class
-// without defining the static member in .cpp file.
-// the template param Derived is required
-// to give different variable instance for each Derived class.
-template < typename T, class Derived > struct StaticVar { static T value_; };
-template < typename T, class Derived > T StaticVar< T, Derived >::value_;
+#if GAZEBO_MAJOR_VERSION < 7 || (GAZEBO_MAJOR_VERSION == 7 && GAZEBO_MINOR_VERSION < 10)
+#error "gazebo_continuous_track supports Gazebo 7.10 or later"
 #endif
 
 // *****
@@ -35,64 +30,6 @@ static inline physics::PhysicsEnginePtr Physics(const physics::WorldPtr &_world)
   return _world->Physics();
 #else
   return _world->GetPhysicsEngine();
-#endif
-}
-
-// *****
-// Model
-// *****
-
-#if GAZEBO_MAJOR_VERSION < 8
-// magic to access physics::Model::links which is a private member variable.
-
-// pointer type of the private member we want to access
-typedef physics::Link_V physics::Model::*LinksPtrT;
-
-// actual implementation of CreateLink().
-// The member variable StaticVar<>::value_ is initialized to &Model::links
-// by CreateLinkImplInitializer.
-class CreateLinkImpl : private StaticVar< LinksPtrT, CreateLinkImpl > {
-  template < LinksPtrT LinksPtr > friend class CreateLinkImplInitializer;
-  typedef StaticVar< LinksPtrT, CreateLinkImpl > LinksPtrVar;
-
-public:
-  static physics::LinkPtr Call(const physics::ModelPtr &_model, const std::string &_name) {
-    // create a named link
-    const physics::LinkPtr link(_model->GetWorld()->GetPhysicsEngine()->CreateLink(_model));
-    link->SetName(_name);
-
-    // add the new link to the private cache of the model.
-    // this cannot be performed without accessing the private variable in gazebo 7.0 .
-    ((*_model).*LinksPtrVar::value_).push_back(link);
-
-    return link;
-  }
-};
-
-// the constructor initializes CreateLinkImpl::StaticVar<>::value_ according to the template
-// variable.
-template < LinksPtrT LinksPtr > class CreateLinkImplInitializer {
-public:
-  CreateLinkImplInitializer() { CreateLinkImpl::LinksPtrVar::value_ = LinksPtr; }
-
-private:
-  static CreateLinkImplInitializer instance_;
-};
-template < LinksPtrT LinksPtr >
-CreateLinkImplInitializer< LinksPtr > CreateLinkImplInitializer< LinksPtr >::instance_;
-
-// instantiate Initializer with &Model::links.
-// this calls the constructor of Initializer,
-// and it initializes CreateLinkImpl::StaticVar<>::value_ to &Model::links
-template class CreateLinkImplInitializer< &physics::Model::links >;
-#endif
-
-static inline physics::LinkPtr CreateLink(const physics::ModelPtr &_model,
-                                          const std::string &_name) {
-#if GAZEBO_MAJOR_VERSION >= 8
-  return _model->CreateLink(_name);
-#else
-  return CreateLinkImpl::Call(_model, _name);
 #endif
 }
 
@@ -130,10 +67,24 @@ static inline double Position(const physics::JointPtr &_joint, const unsigned in
 }
 
 #if GAZEBO_MAJOR_VERSION < 8
+// Magic to access private member functions. This technique is legal but of course not recommended.
+// But we have to use this to avoid a critical bug in Gazebo 7.
+
+// Utility to append a static member variable for a non-templated class
+// without defining the static member in .cpp file.
+// The template param Derived is required
+// to give different variable instance for each Derived class.
+template < typename T, class Derived > struct StaticVar { static T value_; };
+template < typename T, class Derived > T StaticVar< T, Derived >::value_;
+
+// Pointer types of private members we want to access
 typedef math::Pose (physics::Joint::*ComputeChildLinkPosePtrT)(unsigned int, double);
 typedef bool (physics::Joint ::*FindAllConnectedLinksPtrT)(const physics::LinkPtr &,
                                                            physics::Link_V &);
 
+// Actual implementation of SetPosition().
+// The member variables StaticVar<>::value_ is initialized
+// to &Joint::ComputeChildLinkPose and &Joint::FindAllConnectedLinks by SetPositionImplInitializer.
 class SetPositionImpl : private StaticVar< ComputeChildLinkPosePtrT, SetPositionImpl >,
                         private StaticVar< FindAllConnectedLinksPtrT, SetPositionImpl > {
   template < ComputeChildLinkPosePtrT ComputeChildLinkPosePtr,
@@ -177,6 +128,8 @@ public:
   }
 };
 
+// The constructor initializes SetPositionImpl::StaticVar<>::value_
+// according to the template variables.
 template < ComputeChildLinkPosePtrT ComputeChildLinkPosePtr,
            FindAllConnectedLinksPtrT FindAllConnectedLinksPtr >
 class SetPositionImplInitializer {
@@ -194,6 +147,9 @@ template < ComputeChildLinkPosePtrT ComputeChildLinkPosePtr,
 SetPositionImplInitializer< ComputeChildLinkPosePtr, FindAllConnectedLinksPtr >
     SetPositionImplInitializer< ComputeChildLinkPosePtr, FindAllConnectedLinksPtr >::instance_;
 
+// Instantiate Initializer with &Joint::ComputeChildLinkPose and &Joint::FindAllConnectedLinks.
+// This calls the constructor of Initializer,
+// and it initializes SetPositionImpl::StaticVar<>::value_ to the private member pointers.
 template class SetPositionImplInitializer< &physics::Joint::ComputeChildLinkPose,
                                            &physics::Joint::FindAllConnectedLinks >;
 #endif
