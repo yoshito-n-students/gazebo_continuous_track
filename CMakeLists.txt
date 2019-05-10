@@ -112,11 +112,18 @@ catkin_package(
 ## Build ##
 ###########
 
+## Include directory of ODE (gazebo/ode/ode.h, etc)
+set(gazebo_ode_dev_INCLUDE_DIRS "")
+foreach(gazebo_dev_INCLUDE_DIR ${gazebo_dev_INCLUDE_DIRS})
+  list(APPEND gazebo_ode_dev_INCLUDE_DIRS ${gazebo_dev_INCLUDE_DIR}/gazebo)  
+endforeach()
+
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${gazebo_ode_dev_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library

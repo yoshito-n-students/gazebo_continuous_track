@@ -6,11 +6,22 @@
 
 #include <gazebo/physics/physics.hh>
 
+#include <gazebo_continuous_track/gazebo_patch.hpp>
+
+//
+// Functions wrapping API difference between Gazebo versions
+//
+
 namespace gazebo {
 namespace wrap {
 
 #if GAZEBO_MAJOR_VERSION < 7 || (GAZEBO_MAJOR_VERSION == 7 && GAZEBO_MINOR_VERSION < 10)
 #error "gazebo_continuous_track supports Gazebo 7.10 or later"
+#endif
+
+#if GAZEBO_MAJOR_VERSION < 8
+template < typename T, class Derived > struct StaticVar { static T value_; };
+template < typename T, class Derived > T StaticVar< T, Derived >::value_;
 #endif
 
 // *****
@@ -67,30 +78,16 @@ static inline double Position(const physics::JointPtr &_joint, const unsigned in
 }
 
 #if GAZEBO_MAJOR_VERSION < 8
-// Magic to access private member functions. This technique is legal but of course not recommended.
-// But we have to use this to avoid a critical bug in Gazebo 7.
-
-// Utility to append a static member variable for a non-templated class
-// without defining the static member in .cpp file.
-// The template param Derived is required
-// to give different variable instance for each Derived class.
-template < typename T, class Derived > struct StaticVar { static T value_; };
-template < typename T, class Derived > T StaticVar< T, Derived >::value_;
-
 // Pointer types of private members we want to access
-typedef math::Pose (physics::Joint::*ComputeChildLinkPosePtrT)(unsigned int, double);
 typedef bool (physics::Joint ::*FindAllConnectedLinksPtrT)(const physics::LinkPtr &,
                                                            physics::Link_V &);
 
 // Actual implementation of SetPosition().
 // The member variables StaticVar<>::value_ is initialized
 // to &Joint::ComputeChildLinkPose and &Joint::FindAllConnectedLinks by SetPositionImplInitializer.
-class SetPositionImpl : private StaticVar< ComputeChildLinkPosePtrT, SetPositionImpl >,
-                        private StaticVar< FindAllConnectedLinksPtrT, SetPositionImpl > {
-  template < ComputeChildLinkPosePtrT ComputeChildLinkPosePtr,
-             FindAllConnectedLinksPtrT FindAllConnectedLinksPtr >
+class SetPositionImpl : private StaticVar< FindAllConnectedLinksPtrT, SetPositionImpl > {
+  template < FindAllConnectedLinksPtrT FindAllConnectedLinksPtr >
   friend class SetPositionImplInitializer;
-  typedef StaticVar< ComputeChildLinkPosePtrT, SetPositionImpl > ComputeChildLinkPosePtrVar;
   typedef StaticVar< FindAllConnectedLinksPtrT, SetPositionImpl > FindAllConnectedLinksPtrVar;
 
 public:
@@ -108,8 +105,7 @@ public:
     if (_preserveWorldVelocity) {
       // child link's current pose & new pose based on position change
       const math::Pose child_pose(_joint->GetChild()->GetWorldPose());
-      const math::Pose new_child_pose(
-          ((*_joint).*ComputeChildLinkPosePtrVar::value_)(_index, _position));
+      const math::Pose new_child_pose(patch::ComputeChildLinkPose(_joint, _index, _position));
 
       // populate child links recursively
       physics::Link_V links;
@@ -130,28 +126,23 @@ public:
 
 // The constructor initializes SetPositionImpl::StaticVar<>::value_
 // according to the template variables.
-template < ComputeChildLinkPosePtrT ComputeChildLinkPosePtr,
-           FindAllConnectedLinksPtrT FindAllConnectedLinksPtr >
-class SetPositionImplInitializer {
+template < FindAllConnectedLinksPtrT FindAllConnectedLinksPtr > class SetPositionImplInitializer {
 public:
   SetPositionImplInitializer() {
-    SetPositionImpl::ComputeChildLinkPosePtrVar::value_ = ComputeChildLinkPosePtr;
     SetPositionImpl::FindAllConnectedLinksPtrVar::value_ = FindAllConnectedLinksPtr;
   }
 
 private:
   static SetPositionImplInitializer instance_;
 };
-template < ComputeChildLinkPosePtrT ComputeChildLinkPosePtr,
-           FindAllConnectedLinksPtrT FindAllConnectedLinksPtr >
-SetPositionImplInitializer< ComputeChildLinkPosePtr, FindAllConnectedLinksPtr >
-    SetPositionImplInitializer< ComputeChildLinkPosePtr, FindAllConnectedLinksPtr >::instance_;
+template < FindAllConnectedLinksPtrT FindAllConnectedLinksPtr >
+SetPositionImplInitializer< FindAllConnectedLinksPtr >
+    SetPositionImplInitializer< FindAllConnectedLinksPtr >::instance_;
 
 // Instantiate Initializer with &Joint::ComputeChildLinkPose and &Joint::FindAllConnectedLinks.
 // This calls the constructor of Initializer,
 // and it initializes SetPositionImpl::StaticVar<>::value_ to the private member pointers.
-template class SetPositionImplInitializer< &physics::Joint::ComputeChildLinkPose,
-                                           &physics::Joint::FindAllConnectedLinks >;
+template class SetPositionImplInitializer< &physics::Joint::FindAllConnectedLinks >;
 #endif
 
 static inline bool SetPosition(const physics::JointPtr &_joint, const unsigned int _index,
