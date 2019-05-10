@@ -288,7 +288,7 @@ private:
     }
   }
 
-  sdf::ElementPtr CreateBaseVariantModelSDF(const sdf::ElementPtr &_src) const {
+  static sdf::ElementPtr CreateBaseVariantModelSDF(const sdf::ElementPtr &_src) {
     sdf::ElementPtr dst(_src->Clone());
     if (dst->HasElement("pose")) {
       dst->RemoveChild(dst->GetElement("pose"));
@@ -314,23 +314,18 @@ private:
     return dst;
   }
 
-  std::vector< sdf::ElementPtr >
-  PopulateBaseSegmentLinkSDFs(const Properties::Trajectory &_traj_prop) const {
+  static std::vector< sdf::ElementPtr >
+  PopulateBaseSegmentLinkSDFs(const Properties::Trajectory &_traj_prop) {
     std::vector< sdf::ElementPtr > sdfs;
 
     for (const Properties::Trajectory::Segment &segment_prop : _traj_prop.segments) {
       const sdf::ElementPtr sdf(segment_prop.joint->GetChild()->GetSDF()->Clone());
       // remove original <collision> and <visual>
-      if (sdf->HasElement("collision") || sdf->HasElement("visual")) {
-        std::cout << "[" << track_.name << "]:"
-                  << " Removed <collision> and <visual> of "
-                  << segment_prop.joint->GetChild()->GetScopedName() << std::endl;
-        while (sdf->HasElement("collision")) {
-          sdf->RemoveChild(sdf->GetElement("collision"));
-        }
-        while (sdf->HasElement("visual")) {
-          sdf->RemoveChild(sdf->GetElement("visual"));
-        }
+      while (sdf->HasElement("collision")) {
+        sdf->RemoveChild(sdf->GetElement("collision"));
+      }
+      while (sdf->HasElement("visual")) {
+        sdf->RemoveChild(sdf->GetElement("visual"));
       }
       sdfs.push_back(sdf);
     }
@@ -338,8 +333,8 @@ private:
     return sdfs;
   }
 
-  std::vector< sdf::ElementPtr >
-  PopulateBaseSegmentJointSDFs(const Properties::Trajectory &_traj_prop) const {
+  static std::vector< sdf::ElementPtr >
+  PopulateBaseSegmentJointSDFs(const Properties::Trajectory &_traj_prop) {
     std::vector< sdf::ElementPtr > sdfs;
 
     for (const Properties::Trajectory::Segment &segment_prop : _traj_prop.segments) {
@@ -349,8 +344,8 @@ private:
     return sdfs;
   }
 
-  ignition::math::Pose3d ComputeChildPoseOffset(const physics::JointPtr &_joint, const double _from,
-                                                const double _to) const {
+  static ignition::math::Pose3d ComputeChildPoseOffset(const physics::JointPtr &_joint,
+                                                       const double _from, const double _to) {
     return
         // child position when the joint position is <to>
         patch::ComputeChildLinkPose(_joint, 0, _to)
@@ -497,8 +492,8 @@ private:
     return static_cast< std::size_t >(std::floor(track_pos_per_elements / len_per_element));
   }
 
-  void SetJointMotorVelocity(const physics::JointPtr &_joint, const unsigned int _index,
-                             const double _velocity) const {
+  static void SetJointMotorVelocity(const physics::JointPtr &_joint, const unsigned int _index,
+                                    const double _velocity) {
     // using ODE's joint motors function
 
     // set force/torque limit
