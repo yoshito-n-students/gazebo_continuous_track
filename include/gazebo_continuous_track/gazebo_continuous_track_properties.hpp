@@ -1,6 +1,7 @@
 #ifndef GAZEBO_CONTINUOUS_TRACK_PROPERTIES
 #define GAZEBO_CONTINUOUS_TRACK_PROPERTIES
 
+#include <string>
 #include <vector>
 
 #include <gazebo/common/common.hh>
@@ -18,6 +19,7 @@ public:
     // this also asserts the given sdf matches the plugin sdf format.
     const sdf::ElementPtr formatted_sdf(ToPluginSDF(_sdf));
 
+    name = formatted_sdf->GetAttribute("name")->GetAsString();
     sprocket = LoadSprocket(_model, formatted_sdf->GetElement("sprocket"));
     trajectory = LoadTrajectory(_model, formatted_sdf->GetElement("trajectory"));
     pattern = LoadPattern(_model, formatted_sdf->GetElement("pattern"));
@@ -29,6 +31,7 @@ public:
   // public properties
   // *****************
 
+  std::string name;
   struct Sprocket {
     physics::JointPtr joint;
     double pitch_diameter;

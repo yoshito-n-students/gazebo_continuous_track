@@ -99,7 +99,7 @@ public:
     ((*_model).*RemoveLinkPtrVar::value_)(_link->GetScopedName());
 
     // remove the link as a child entity from the model
-    _model->RemoveChild(_link->GetId());
+    // _model->RemoveChild(_link->GetId());
   }
 };
 
@@ -117,9 +117,9 @@ template class RemoveLinkImplInitializer< &physics::Model::RemoveLink >;
 
 // alternative of physics::Model::RemoveChild() .
 // the original RemoveChild() has a critical bug;
-// when a link to be removed is given, it tries to remove the link and also joints connected to the link.
-// however, it can wrongly remove joints which are not connected to the link
-// because it does not care about namescope of links.
+// when a link to be removed is given, it tries to remove the link and also joints connected to the
+// link. however, it can wrongly remove joints which are not connected to the link because it does
+// not care about namescope of links.
 static inline void RemoveLink(const physics::ModelPtr &_model, const physics::LinkPtr &_link) {
   RemoveLinkImpl::Call(_model, _link);
 }

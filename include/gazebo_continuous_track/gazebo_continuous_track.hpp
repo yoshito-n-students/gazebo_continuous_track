@@ -34,23 +34,23 @@ private:
 
 public:
   void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) override {
-    // store plugin name just for console message
-    plugin_name_ = _sdf->GetAttribute("name")->GetAsString();
-
-    std::cout << "[" << plugin_name_ << "]:"
-              << " Start loading plugin" << std::endl;
-
     GZ_ASSERT(wrap::Physics(_model->GetWorld())->GetType() == "ode",
               "ContinuousTrack only supports ODE.");
-
-    // advertise the visual topic to toggle track visuals
-    InitVisualPublisher(_model);
 
     // load properties from sdf
     const Properties prop(_model, _sdf);
 
-    // compose joints/links of the track by duplicating segment joints/links specified in properties
-    track_ = ComposeTrack(_model, prop);
+    std::cout << "[" << prop.name << "]:"
+              << " Start loading plugin" << std::endl;
+
+    // compose the track according to the propaties
+    track_.name = prop.name;
+    ComposeSprocket(prop.sprocket);
+    ComposeBelt(_model, prop.trajectory, prop.pattern);
+    InitTrack(prop);
+
+    // advertise the visual topic to toggle track visuals
+    InitVisualPublisher(wrap::Name(_model->GetWorld()));
 
     // schedule enabling the initial variant & disabling other variants
     // (the queued msgs are published at the begging of the first world update
@@ -65,16 +65,17 @@ public:
     update_connection_ = event::Events::ConnectWorldUpdateBegin(
         boost::bind(&ContinuousTrack::UpdateTrack, this, _1));
 
-    std::cout << "[" << plugin_name_ << "]:"
+    std::cout << "[" << prop.name << "]:"
               << " Loaded plugin" << std::endl;
   }
 
 private:
-  // ***************
-  // building tracks
-  // ***************
+  // ******************
+  // Building the track
+  // ******************
 
   struct Track {
+    std::string name;
     //
     struct Sprocket {
       physics::JointPtr joint;
@@ -107,38 +108,25 @@ private:
     Belt belt;
   };
 
-  Track ComposeTrack(const physics::ModelPtr &_model, const Properties &_prop) const {
-    Track track;
-    track.sprocket = ComposeSprocket(_prop.sprocket);
-    track.belt = ComposeBelt(_model, _prop.trajectory, _prop.pattern);
-    InitTrack(_prop, track);
-    return track;
+  void ComposeSprocket(const Properties::Sprocket &_prop) {
+    track_.sprocket.joint = _prop.joint;
+    track_.sprocket.joint_to_track = _prop.pitch_diameter / 2.;
   }
 
-  Track::Sprocket ComposeSprocket(const Properties::Sprocket &_prop) const {
-    Track::Sprocket sprocket;
-    sprocket.joint = _prop.joint;
-    sprocket.joint_to_track = _prop.pitch_diameter / 2.;
-    return sprocket;
-  }
-
-  Track::Belt ComposeBelt(const physics::ModelPtr &_model, const Properties::Trajectory &_traj_prop,
-                          const Properties::Pattern &_pattern_prop) const {
-    Track::Belt belt;
-    ComposeSegments(_model, _traj_prop, _pattern_prop, belt.segments, belt.perimeter);
-    belt.elements_per_round = _pattern_prop.elements_per_round;
-    belt.variant_id = 0; // TODO: set variant id from initial track pos
-    return belt;
+  void ComposeBelt(const physics::ModelPtr &_model, const Properties::Trajectory &_traj_prop,
+                   const Properties::Pattern &_pattern_prop) {
+    ComposeSegments(_model, _traj_prop, _pattern_prop);
+    track_.belt.elements_per_round = _pattern_prop.elements_per_round;
+    track_.belt.variant_id = 0; // initialized by InitTrack() later
   }
 
   void ComposeSegments(const physics::ModelPtr &_model, const Properties::Trajectory &_traj_prop,
-                       const Properties::Pattern &_pattern_prop,
-                       std::vector< Track::Belt::Segment > &_segments, double &_perimeter) const {
+                       const Properties::Pattern &_pattern_prop) {
     namespace im = ignition::math;
 
     // fill fields related to length (_segment.joint_to_track, _segment.length, and _perimeter).
     // this resizes segments.
-    FillSegmentLength(_traj_prop, _segments, _perimeter);
+    FillSegmentLength(_traj_prop);
 
     // populate base sdfs which segment links/joints will inherit
     const sdf::ElementPtr base_model_sdf(CreateBaseVariantModelSDF(_model->GetSDF()));
@@ -155,7 +143,7 @@ private:
       }
 
       // separation between adjacent elements
-      const double len_step(_perimeter / _pattern_prop.elements_per_round);
+      const double len_step(track_.belt.perimeter / _pattern_prop.elements_per_round);
       // length left on the current segment to place elements
       double len_left(-len_step / 2.);
       // length traveled on the current segment
@@ -167,28 +155,30 @@ private:
 
       //
       for (std::size_t segm_id = 0; segm_id < _traj_prop.segments.size(); ++segm_id) {
+        const Properties::Trajectory::Segment &segment_prop(_traj_prop.segments[segm_id]);
+        const Track::Belt::Segment &segment(track_.belt.segments[segm_id]);
+        const sdf::ElementPtr &link_sdf(link_sdfs[segm_id]);
 
         // update length left for the current segment
-        len_left += _segments[segm_id].length;
+        len_left += segment.length;
 
         // base pose of pattern elements on the current segment
         im::Pose3d base_pose(
-            ComputeChildPoseOffset(_traj_prop.segments[segm_id].joint, 0,
-                                   len_traveled / _segments[segm_id].joint_to_track));
-        const im::Pose3d base_pose_step(ComputeChildPoseOffset(
-            _traj_prop.segments[segm_id].joint, 0, len_step / _segments[segm_id].joint_to_track));
+            ComputeChildPoseOffset(segment_prop.joint, 0, len_traveled / segment.joint_to_track));
+        const im::Pose3d base_pose_step(
+            ComputeChildPoseOffset(segment_prop.joint, 0, len_step / segment.joint_to_track));
 
         // place elements onto link sdf as long as length remains
         std::size_t step_count(0);
         while (len_left >= 0.) {
+          const Properties::Pattern::Element &element_prop(_pattern_prop.elements[elem_id]);
 
           // add <collision> of the element to link sdf
-          for (std::size_t collision_id = 0;
-               collision_id < _pattern_prop.elements[elem_id].collision_sdfs.size();
+          for (std::size_t collision_id = 0; collision_id < element_prop.collision_sdfs.size();
                ++collision_id) {
             // add new <collision> on the link sdf and copy base values
-            const sdf::ElementPtr collision_elem(link_sdfs[segm_id]->AddElement("collision"));
-            collision_elem->Copy(_pattern_prop.elements[elem_id].collision_sdfs[collision_id]);
+            const sdf::ElementPtr collision_elem(link_sdf->AddElement("collision"));
+            collision_elem->Copy(element_prop.collision_sdfs[collision_id]);
             // give <collision> a unique name
             collision_elem->GetAttribute("name")->Set(
                 "step" + boost::lexical_cast< std::string >(step_count) + "_collision" +
@@ -200,11 +190,11 @@ private:
           }
 
           // add <visual> of the element to link sdf
-          for (std::size_t visual_id = 0;
-               visual_id < _pattern_prop.elements[elem_id].visual_sdfs.size(); ++visual_id) {
+          for (std::size_t visual_id = 0; visual_id < element_prop.visual_sdfs.size();
+               ++visual_id) {
             // add new <collision> on the link sdf and copy base values
-            const sdf::ElementPtr visual_elem(link_sdfs[segm_id]->AddElement("visual"));
-            visual_elem->Copy(_pattern_prop.elements[elem_id].visual_sdfs[visual_id]);
+            const sdf::ElementPtr visual_elem(link_sdf->AddElement("visual"));
+            visual_elem->Copy(element_prop.visual_sdfs[visual_id]);
             // give <visual> a unique name
             visual_elem->GetAttribute("name")->Set(
                 "step" + boost::lexical_cast< std::string >(step_count) + "_visual" +
@@ -224,12 +214,12 @@ private:
         }
 
         // update length traveled for the next segment
-        len_traveled -= _segments[segm_id].length;
+        len_traveled -= segment.length;
       }
 
       // model for variant links/joints
       const sdf::ElementPtr model_sdf(base_model_sdf->Clone());
-      model_sdf->GetAttribute("name")->Set("variant" +
+      model_sdf->GetAttribute("name")->Set(track_.name + "_variant" +
                                            boost::lexical_cast< std::string >(variant_id));
       const physics::ModelPtr model(
           patch::CreateNestedModel(_model, model_sdf->GetAttribute("name")->GetAsString()));
@@ -237,32 +227,35 @@ private:
 
       // create link/joint for each segment on the basis of updated sdfs
       for (std::size_t segm_id = 0; segm_id < _traj_prop.segments.size(); ++segm_id) {
+        Track::Belt::Segment &segment(track_.belt.segments[segm_id]);
+        const Properties::Trajectory::Segment &segment_prop(_traj_prop.segments[segm_id]);
+
         Track::Belt::Segment::Variant variant;
 
         // link
         // Physics()->CreateLink() does not register a new link to the model
         // and does not show up the link correctly on gzclient (gazebo7&9)
+        const sdf::ElementPtr &link_sdf(link_sdfs[segm_id]);
         variant.link = boost::dynamic_pointer_cast< physics::ODELink >(
-            model->CreateLink(link_sdfs[segm_id]->GetAttribute("name")->GetAsString()));
-        variant.link->Load(link_sdfs[segm_id]);
+            model->CreateLink(link_sdf->GetAttribute("name")->GetAsString()));
+        variant.link->Load(link_sdf);
         // copy base link pose because it may be changed by another plugin loaded before this
-        variant.link->SetWorldPose(wrap::WorldPose(_traj_prop.segments[segm_id].joint->GetChild()));
+        variant.link->SetWorldPose(wrap::WorldPose(segment_prop.joint->GetChild()));
 
         // joint
         const sdf::ElementPtr joint_sdf(base_joint_sdfs[segm_id]->Clone());
         joint_sdf->GetElement("child")->Set(variant.link->GetScopedName());
         // Physics()->CreateJoint() does not register a new joint to the model
         // and does not show up the joint correctly on gzclient (gazebo7&9)
-        variant.joint =
-            model->CreateJoint(joint_sdf->GetAttribute("name")->GetAsString(),
-                               joint_sdf->GetAttribute("type")->GetAsString(),
-                               _traj_prop.segments[segm_id].joint->GetParent(), variant.link);
+        variant.joint = model->CreateJoint(joint_sdf->GetAttribute("name")->GetAsString(),
+                                           joint_sdf->GetAttribute("type")->GetAsString(),
+                                           segment_prop.joint->GetParent(), variant.link);
         variant.joint->Load(joint_sdf);
         // set initial zero velocity
         SetJointMotorVelocity(variant.joint, 0, 0.);
 
-        _segments[segm_id].variants.push_back(variant);
-        std::cout << "[" << plugin_name_ << "]:"
+        segment.variants.push_back(variant);
+        std::cout << "[" << track_.name << "]:"
                   << " Created " << variant.link->GetScopedName() << " and "
                   << variant.joint->GetScopedName() << std::endl;
       }
@@ -271,11 +264,10 @@ private:
     }
   }
 
-  void FillSegmentLength(const Properties::Trajectory &_traj_prop,
-                         std::vector< Track::Belt::Segment > &_segments, double &_perimeter) const {
+  void FillSegmentLength(const Properties::Trajectory &_traj_prop) {
     namespace im = ignition::math;
 
-    _perimeter = 0.;
+    track_.belt.perimeter = 0.;
 
     for (const Properties::Trajectory::Segment &segment_prop : _traj_prop.segments) {
       Track::Belt::Segment segment;
@@ -299,9 +291,9 @@ private:
         GZ_ASSERT(false, "Bug. Unexpected joint type.");
       }
 
-      _segments.push_back(segment);
+      track_.belt.segments.push_back(segment);
 
-      _perimeter += segment.length;
+      track_.belt.perimeter += segment.length;
     }
   }
 
@@ -339,7 +331,7 @@ private:
       const sdf::ElementPtr sdf(segment_prop.joint->GetChild()->GetSDF()->Clone());
       // remove original <collision> and <visual>
       if (sdf->HasElement("collision") || sdf->HasElement("visual")) {
-        std::cout << "[" << plugin_name_ << "]:"
+        std::cout << "[" << track_.name << "]:"
                   << " Removed <collision> and <visual> of "
                   << segment_prop.joint->GetChild()->GetScopedName() << std::endl;
         while (sdf->HasElement("collision")) {
@@ -375,7 +367,11 @@ private:
         - patch::ComputeChildLinkPose(_joint, 0, _from);
   }
 
-  void InitTrack(const Properties &_prop, const Track &_track) const {
+  // **********************
+  // Initializing the track
+  // **********************
+
+  void InitTrack(const Properties &_prop) {
     // clean up seed links/joints of variants no longer required
     for (const Properties::Trajectory::Segment &segment_prop : _prop.trajectory.segments) {
       // get link before removing joint
@@ -385,7 +381,7 @@ private:
       segment_prop.joint->GetParent()->GetModel()->RemoveJoint(segment_prop.joint->GetScopedName());
       patch::RemoveLink(link->GetModel(), link);
 
-      std::cout << "[" << plugin_name_ << "]:"
+      std::cout << "[" << track_.name << "]:"
                 << " Removed " << segment_prop.joint->GetScopedName() << " and "
                 << link->GetScopedName() << std::endl;
     }
@@ -395,12 +391,12 @@ private:
       // populate ODE space IDs in links wrapped by the track
       std::set< dSpaceID > space_ids;
       space_ids.insert(
-          boost::dynamic_pointer_cast< physics::ODELink >(_track.sprocket.joint->GetParent())
+          boost::dynamic_pointer_cast< physics::ODELink >(track_.sprocket.joint->GetParent())
               ->GetSpaceId());
       space_ids.insert(
-          boost::dynamic_pointer_cast< physics::ODELink >(_track.sprocket.joint->GetChild())
+          boost::dynamic_pointer_cast< physics::ODELink >(track_.sprocket.joint->GetChild())
               ->GetSpaceId());
-      for (const Track::Belt::Segment &segment : _track.belt.segments) {
+      for (const Track::Belt::Segment &segment : track_.belt.segments) {
         const physics::ODELinkPtr parent(boost::dynamic_pointer_cast< physics::ODELink >(
             segment.variants[0].joint->GetParent()));
         space_ids.insert(parent->GetSpaceId());
@@ -412,11 +408,15 @@ private:
       }
     }
 
+    // initialize variant id
+    track_.belt.variant_id =
+        CalcVariantId(wrap::Position(track_.sprocket.joint, 0) * track_.sprocket.joint_to_track);
+
     // init collide mode of the track
-    for (std::size_t variant_id = 0; variant_id < _track.belt.segments[0].variants.size();
+    for (std::size_t variant_id = 0; variant_id < track_.belt.segments[0].variants.size();
          ++variant_id) {
-      const physics::ODELinkPtr link(_track.belt.segments[0].variants[variant_id].link);
-      if (variant_id == _track.belt.variant_id) {
+      const physics::ODELinkPtr &link(track_.belt.segments[0].variants[variant_id].link);
+      if (variant_id == track_.belt.variant_id) {
         // do collide environment, does not collide the wrapped body and the track itself
         dGeomSetCategoryBits((dGeomID)link->GetSpaceId(), GZ_GHOST_COLLIDE);
         dGeomSetCollideBits((dGeomID)link->GetSpaceId(), GZ_ALL_COLLIDE);
@@ -428,9 +428,9 @@ private:
     }
   }
 
-  // ********************
-  // Updating simulation
-  // ********************
+  // ******************
+  // Updating the track
+  // ******************
 
   void UpdateTrack(const common::UpdateInfo &_info) {
     // enable visuals of the current variant and disable others
@@ -525,9 +525,9 @@ private:
   // Transporting visual messages
   // ****************************
 
-  void InitVisualPublisher(const physics::ModelPtr &_model) {
+  void InitVisualPublisher(const std::string &_world_name) {
     node_.reset(new transport::Node());
-    node_->Init(wrap::Name(_model->GetWorld()));
+    node_->Init(_world_name);
     visual_publisher_ = node_->Advertise< msgs::Visual >("~/visual");
   }
 
@@ -547,8 +547,6 @@ private:
   }
 
 private:
-  // the name of this plugin. use as prefix of console message.
-  std::string plugin_name_;
   // transport to toggling track visuals
   transport::NodePtr node_;
   transport::PublisherPtr visual_publisher_;
