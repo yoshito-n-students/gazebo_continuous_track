@@ -52,15 +52,6 @@ public:
     // advertise the visual topic to toggle track visuals
     InitVisualPublisher(wrap::Name(_model->GetWorld()));
 
-    // schedule enabling the initial variant & disabling other variants
-    // (the queued msgs are published at the begging of the first world update
-    //  because gzclient does not update visuals before world starts)
-    for (std::size_t variant_id = 0; variant_id < track_.belt.segments[0].variants.size();
-         ++variant_id) {
-      QueueVisibleMsgs(track_.belt.segments[0].variants[variant_id].link->GetModel(),
-                       variant_id == track_.belt.variant_id);
-    }
-
     // enable callback on beggining of every world step to keep updating the track
     update_connection_ = event::Events::ConnectWorldUpdateBegin(
         boost::bind(&ContinuousTrack::UpdateTrack, this, _1));
@@ -417,10 +408,14 @@ private:
          ++variant_id) {
       const physics::ODELinkPtr &link(track_.belt.segments[0].variants[variant_id].link);
       if (variant_id == track_.belt.variant_id) {
+        // visible on gzclient
+        QueueVisibleMsgs(link->GetModel(), true);
         // do collide environment, does not collide the wrapped body and the track itself
         dGeomSetCategoryBits((dGeomID)link->GetSpaceId(), GZ_GHOST_COLLIDE);
         dGeomSetCollideBits((dGeomID)link->GetSpaceId(), GZ_ALL_COLLIDE);
       } else {
+        // invisible on gzclient
+        QueueVisibleMsgs(link->GetModel(), false);
         // collide nothing
         dGeomSetCategoryBits((dGeomID)link->GetSpaceId(), GZ_NONE_COLLIDE);
         dGeomSetCollideBits((dGeomID)link->GetSpaceId(), GZ_NONE_COLLIDE);
