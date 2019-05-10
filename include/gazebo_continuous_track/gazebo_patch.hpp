@@ -99,8 +99,11 @@ public:
     // remove the link from the link cache in the model
     ((*_model).*RemoveLinkPtrVar::value_)(_link->GetScopedName());
 
+    // remove the link description from the model sdf
+    _link->GetSDF()->RemoveFromParent();
+
     // remove the link as a child entity from the model
-    // _model->RemoveChild(_link->GetId());
+    _model->RemoveChild(_link->GetId());
   }
 };
 
