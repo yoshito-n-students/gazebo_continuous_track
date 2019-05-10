@@ -3,6 +3,7 @@
 
 #include <string>
 
+#include <gazebo/physics/ode/ODEJoint.hh>
 #include <gazebo/physics/physics.hh>
 
 //
@@ -128,15 +129,8 @@ static inline void RemoveLink(const physics::ModelPtr &_model, const physics::Li
 // Joint
 // *****
 
-// Magic to access private member functions. This technique is legal but of course not recommended.
-// But we have to use this to avoid a critical bug in Gazebo 7.
-
-// Pointer type of the private members we want to access
 typedef math::Pose (physics::Joint::*ComputeChildLinkPosePtrT)(unsigned int, double);
 
-// Actual implementation of ComputeChildLinkPose().
-// The member variables StaticVar<>::value_ is initialized to &Joint::ComputeChildLinkPose
-// by ComputeChildLinkPoseImplInitializer.
 class ComputeChildLinkPoseImpl
     : private StaticVar< ComputeChildLinkPosePtrT, ComputeChildLinkPoseImpl > {
   template < ComputeChildLinkPosePtrT ComputeChildLinkPosePtr >
@@ -151,8 +145,6 @@ public:
   }
 };
 
-// The constructor initializes ComputeChildLinkPoseImpl::StaticVar<>::value_
-// according to the template variables.
 template < ComputeChildLinkPosePtrT ComputeChildLinkPosePtr >
 class ComputeChildLinkPoseImplInitializer {
 public:
@@ -167,16 +159,17 @@ template < ComputeChildLinkPosePtrT ComputeChildLinkPosePtr >
 ComputeChildLinkPoseImplInitializer< ComputeChildLinkPosePtr >
     ComputeChildLinkPoseImplInitializer< ComputeChildLinkPosePtr >::instance_;
 
-// Instantiate Initializer with &Joint::ComputeChildLinkPose
-// This calls the constructor of Initializer,
-// and it initializes ComputeChildLinkPoseImpl::StaticVar<>::value_ to the private member pointers.
 template class ComputeChildLinkPoseImplInitializer< &physics::Joint::ComputeChildLinkPose >;
 
+// physics::Joint::ComputeChildLinkPose() are safe to be public
+// as it does not change member variables (so could be a const member function)
+// but it is actually a non-const private function ...
 static inline ignition::math::Pose3d ComputeChildLinkPose(const physics::JointPtr &_joint,
                                                           const unsigned int _index,
                                                           const double _position) {
   return ComputeChildLinkPoseImpl::Call(_joint, _index, _position);
 }
+
 } // namespace patch
 } // namespace gazebo
 
