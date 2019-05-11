@@ -99,11 +99,35 @@ public:
     // remove the link from the link cache in the model
     ((*_model).*RemoveLinkPtrVar::value_)(_link->GetScopedName());
 
-    // remove the link description from the model sdf
-    _link->GetSDF()->RemoveFromParent();
+    // remove sdf update functions related to this link instance
+    // or cause a runtime error on the next call of the parent model sdf's Update()
+    const sdf::ElementPtr sdf(_link->GetSDF());
+    // final call of update functions to leave the final properties in the link sdf
+    sdf->Update();
+    UnsetUpdateFunc(sdf);
 
     // remove the link as a child entity from the model
     _model->RemoveChild(_link->GetId());
+  }
+
+private:
+  static void UnsetUpdateFunc(const sdf::ElementPtr &_sdf) {
+    // unset update functions on this element
+    for (std::size_t attr_id = 0; attr_id < _sdf->GetAttributeCount(); ++attr_id) {
+      _sdf->GetAttribute(attr_id)->SetUpdateFunc(nullptr);
+    }
+    const sdf::ParamPtr value(_sdf->GetValue());
+    if (value) {
+      value->SetUpdateFunc(nullptr);
+    }
+
+    // recursively unset update functions on child elements
+    for (sdf::ElementPtr elem = _sdf->GetFirstElement(); elem; elem = elem->GetNextElement()) {
+      UnsetUpdateFunc(elem);
+    }
+    for (std::size_t desc_id = 0; desc_id < _sdf->GetElementDescriptionCount(); ++desc_id) {
+      UnsetUpdateFunc(_sdf->GetElementDescription(desc_id));
+    }
   }
 };
 
