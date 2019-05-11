@@ -316,30 +316,18 @@ private:
   static std::vector< sdf::ElementPtr >
   PopulateBaseSegmentLinkSDFs(const Properties::Trajectory &_traj_prop) {
     std::vector< sdf::ElementPtr > sdfs;
-
     for (const Properties::Trajectory::Segment &segment_prop : _traj_prop.segments) {
-      const sdf::ElementPtr sdf(segment_prop.joint->GetChild()->GetSDF()->Clone());
-      // remove original <collision> and <visual>
-      while (sdf->HasElement("collision")) {
-        sdf->RemoveChild(sdf->GetElement("collision"));
-      }
-      while (sdf->HasElement("visual")) {
-        sdf->RemoveChild(sdf->GetElement("visual"));
-      }
-      sdfs.push_back(sdf);
+      sdfs.push_back(segment_prop.joint->GetChild()->GetSDF()->Clone());
     }
-
     return sdfs;
   }
 
   static std::vector< sdf::ElementPtr >
   PopulateBaseSegmentJointSDFs(const Properties::Trajectory &_traj_prop) {
     std::vector< sdf::ElementPtr > sdfs;
-
     for (const Properties::Trajectory::Segment &segment_prop : _traj_prop.segments) {
       sdfs.push_back(segment_prop.joint->GetSDF()->Clone());
     }
-
     return sdfs;
   }
 
