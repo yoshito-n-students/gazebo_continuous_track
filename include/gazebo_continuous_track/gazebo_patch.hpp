@@ -104,14 +104,14 @@ public:
     const sdf::ElementPtr sdf(_link->GetSDF());
     // final call of update functions to leave the final properties in the link sdf
     sdf->Update();
-    UnsetUpdateFunc(sdf);
+    UnsetUpdateFuncs(sdf);
 
     // remove the link as a child entity from the model
     _model->RemoveChild(_link->GetId());
   }
 
 private:
-  static void UnsetUpdateFunc(const sdf::ElementPtr &_sdf) {
+  static void UnsetUpdateFuncs(const sdf::ElementPtr &_sdf) {
     // unset update functions on this element
     for (std::size_t attr_id = 0; attr_id < _sdf->GetAttributeCount(); ++attr_id) {
       _sdf->GetAttribute(attr_id)->SetUpdateFunc(nullptr);
@@ -123,10 +123,10 @@ private:
 
     // recursively unset update functions on child elements
     for (sdf::ElementPtr elem = _sdf->GetFirstElement(); elem; elem = elem->GetNextElement()) {
-      UnsetUpdateFunc(elem);
+      UnsetUpdateFuncs(elem);
     }
     for (std::size_t desc_id = 0; desc_id < _sdf->GetElementDescriptionCount(); ++desc_id) {
-      UnsetUpdateFunc(_sdf->GetElementDescription(desc_id));
+      UnsetUpdateFuncs(_sdf->GetElementDescription(desc_id));
     }
   }
 };
