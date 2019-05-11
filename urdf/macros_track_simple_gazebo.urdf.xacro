@@ -8,92 +8,6 @@
 
     <xacro:include filename="macros_common_gazebo.urdf.xacro" />
 
-    <!-- track segment templates which can be used with common population macros -->
-
-    <xacro:macro name="make_straight_segment_simple_link_template" params="mass:=^ size_x:=^ size_y:=^ size_z:=^ mu:=^|0.5 min_depth:=^|0.01 *material">
-        <xacro:make_box_inertial  />
-        <xacro:make_box_collision size="${size_x} ${size_y} ${size_z}" />
-        <xacro:make_box_visual size="${size_x} ${size_y} ${size_z}">
-            <xacro:insert_block name="material" />
-        </xacro:make_box_visual>
-    </xacro:macro>
-
-    <xacro:macro name="make_straight_segment_simple_joint_template" params="parent:=^ implicit_spring_damper:=^|1">
-        <parent>${parent}</parent>
-        <axis>
-            <xyz>1 0 0</xyz>
-            <use_parent_model_frame>0</use_parent_model_frame>
-        </axis>
-        <physics>
-            <ode>
-                <implicit_spring_damper>${implicit_spring_damper}</implicit_spring_damper>
-            </ode>
-        </physics>
-    </xacro:macro>
-
-    <xacro:macro name="make_arc_segment_simple_link_template" params="mass:=^ length:=^ radius:=^ mu:=^|0.5 min_depth:=^|0.5 *material">
-        <xacro:make_cylinder_inertial pose="0 0 0 ${pi / 2} 0 0" />
-        <xacro:make_cylinder_collision pose="0 0 0 ${pi / 2} 0 0" />
-        <xacro:make_cylinder_visual pose="0 0 0 ${pi / 2} 0 0">
-            <xacro:insert_block name="material" />
-        </xacro:make_cylinder_visual>
-    </xacro:macro>
-
-    <xacro:macro name="make_arc_segment_simple_joint_template" params="parent:=^ implicit_spring_damper:=^|1">
-        <parent>${parent}</parent>
-        <axis>
-            <xyz>0 1 0</xyz>
-            <use_parent_model_frame>0</use_parent_model_frame>
-        </axis>
-        <physics>
-            <ode>
-                <implicit_spring_damper>${implicit_spring_damper}</implicit_spring_damper>
-            </ode>
-        </physics>
-    </xacro:macro>
-
-    <!-- macros for populating segments with common population macros and templates -->
-
-    <xacro:macro name="populate_straight_segments_simple" params="name_prefix:=^ x:=^|0 y:=^|0 z:=^|0 roll:=^|0 pitch:=^|0 yaw:=^|0 dx:=^|0 dy:=^|0 dz:=^|0 droll:=^|0 dpitch:=^|0 dyaw:=^|0 mass:=^ size_x:=^ size_y:=^ size_z:=^ parent:=^ mu:=^|0.5 min_depth:=^|0.01 implicit_spring_damper:=^|1 *material count:=^">
-        <xacro:populate_links name_prefix="${name_prefix}_link">
-            <template>
-                <xacro:make_straight_segment_simple_link_template>
-                    <xacro:insert_block name="material" />
-                </xacro:make_straight_segment_simple_link_template>
-            </template>
-        </xacro:populate_links>
-        <xacro:populate_joints name_prefix="${name_prefix}_joint" type="prismatic" child_prefix="${name_prefix}_link">
-            <template>
-                <xacro:make_straight_segment_simple_joint_template />
-            </template>
-        </xacro:populate_joints>
-    </xacro:macro>
-
-    <xacro:macro name="populate_arc_segments_simple" params="name_prefix:=^ x:=^|0 y:=^|0 z:=^|0 roll:=^|0 pitch:=^|0 yaw:=^|0 dx:=^|0 dy:=^|0 dz:=^|0 droll:=^|0 dpitch:=^|0 dyaw:=^|0 mass:=^ length:=^ radius:=^ parent:=^ mu:=^|0.5 min_depth:=^|0.01 implicit_spring_damper:=^|1 *material count:=^">
-        <xacro:populate_links name_prefix="${name_prefix}_link">
-            <template>
-                <xacro:make_arc_segment_simple_link_template >
-                    <xacro:insert_block name="material" />
-                </xacro:make_arc_segment_simple_link_template>
-            </template>
-        </xacro:populate_links>
-        <xacro:populate_joints name_prefix="${name_prefix}_joint" type="revolute" child_prefix="${name_prefix}_link">
-            <template>
-                <xacro:make_arc_segment_simple_joint_template />
-            </template>
-        </xacro:populate_joints>
-    </xacro:macro>
-
-    <xacro:macro name="populate_arc_segments_simple_for_plugin" params="name_prefix:=^ pitch_diameter:=^ i:=0 count=^">
-        <xacro:if value="${i &lt; count}">
-            <segment>
-                <joint>${name_prefix}${i}</joint>
-                <pitch_diameter>${pitch_diameter}</pitch_diameter>
-            </segment>
-            <xacro:populate_arc_segments_simple_for_plugin i="${i + 1}" />
-        </xacro:if>
-    </xacro:macro>
-
     <!-- macro which expands to simple plugin definition -->
 
     <xacro:macro name="make_track_simple_plugin" params="name sprocket_joint:=^ pitch_diameter:=^">
@@ -123,6 +37,16 @@
         </gazebo>
     </xacro:macro>
 
+    <xacro:macro name="populate_arc_segments_for_simple_plugin" params="name_prefix:=^ pitch_diameter:=^ i:=0 count=^">
+        <xacro:if value="${i &lt; count}">
+            <segment>
+                <joint>${name_prefix}${i}</joint>
+                <pitch_diameter>${pitch_diameter}</pitch_diameter>
+            </segment>
+            <xacro:populate_arc_segments_for_simple_plugin i="${i + 1}" />
+        </xacro:if>
+    </xacro:macro>
+
     <xacro:macro name="make_track_simple_plugin_wheels" params="name sprocket_joint:=^ pitch_diameter:=^ count:=^">
         <gazebo>
             <plugin name="${name}" filename="libContinuousTrackSimple.so">
@@ -131,7 +55,7 @@
                     <pitch_diameter>${pitch_diameter}</pitch_diameter>
                 </sprocket>
                 <track>
-                    <xacro:populate_arc_segments_simple_for_plugin name_prefix="${name}_wheel_joint" />
+                    <xacro:populate_arc_segments_for_simple_plugin name_prefix="${name}_wheel_joint" />
                 </track>
             </plugin>
         </gazebo>
@@ -140,19 +64,19 @@
     <!-- main entry point: macro for making oval track by ContinuousTrackSimple plugin -->
 
     <xacro:macro name="make_track_simple" params="name x:=^|0 y:=^|0 z:=^|0 roll:=^|0 pitch:=^|0 yaw:=^|0 mass:=^ length:=^ radius:=^ width:=^ parent:=^ sprocket_joint:=^ pitch_diameter:=^ mu:=^|0.5 min_depth:=^|0.01 implicit_spring_damper:=^|1 *material">
-        <xacro:populate_straight_segments_simple name_prefix="${name}_straight_segment" z="${z + radius / 2}" dz="${-radius}" dpitch="${pi}" mass="${mass / 4}" size_x="${length}" size_y="${width}" size_z="${radius}" count="2">
+        <xacro:populate_straight_segments name_prefix="${name}_straight_segment" x="${x - length / 2}" z="${z + radius}" dx="${length}" dz="${-2 * radius}" dpitch="${pi}" mass="${mass / 4}" size_x="${length}" size_y="${width}" size_z="${radius}" count="2">
             <xacro:insert_block name="material" />
-        </xacro:populate_straight_segments_simple>
-        <xacro:populate_arc_segments_simple name_prefix="${name}_arc_segment" x="${x + length / 2}" dx="${-length}" dpitch="${pi}" mass="${mass / 4}" length="${width}" count="2">
+        </xacro:populate_straight_segments>
+        <xacro:populate_arc_segments name_prefix="${name}_arc_segment" x="${x + length / 2}" z="${z + radius}" dx="${-length}" dz="${-2 * radius}" dpitch="${pi}" mass="${mass / 4}" length="${width}" count="2">
             <xacro:insert_block name="material" />
-        </xacro:populate_arc_segments_simple>
+        </xacro:populate_arc_segments>
         <xacro:make_track_simple_plugin name="${name}" />
     </xacro:macro>
 
     <xacro:macro name="make_track_simple_wheels" params="name x:=^|0 y:=^|0 z:=^|0 roll:=^|0 pitch:=^|0 yaw:=^|0 mass:=^ length:=^ radius:=^ width:=^ parent:=^ sprocket_joint:=^ pitch_diameter:=^ mu:=^|0.5 min_depth:=^|0.01 implicit_spring_damper:=^|1 *material count:=^">
-        <xacro:populate_arc_segments_simple name_prefix="${name}_wheel" x="${x + length / 2}" dx="${-length / (count - 1)}" mass="${mass / count}" length="${width}">
+        <xacro:populate_arc_segments name_prefix="${name}_wheel" x="${x + length / 2}"  z="${z + radius}" dx="${-length / (count - 1)}" mass="${mass / count}" length="${width}">
             <xacro:insert_block name="material" />
-        </xacro:populate_arc_segments_simple>
+        </xacro:populate_arc_segments>
         <xacro:make_track_simple_plugin_wheels name="${name}" />
     </xacro:macro>
 
