@@ -136,15 +136,15 @@ private:
       // separation between adjacent elements
       const double len_step(track_.belt.perimeter / _pattern_prop.elements_per_round);
       // length left on the current segment to place elements
-      double len_left(-len_step / 2.);
+      double len_left(0.);
       // length traveled on the current segment
-      // (to place exactly <elements_per_round> elements, we do not initialize this value to 0)
-      double len_traveled(len_step / 2.);
+      double len_traveled(0.);
       // index of the element to be placed next
       // (variant[0] places element[n-1] first, ... variant[n-1] does element[0])
       std::size_t elem_id(_pattern_prop.elements.size() - 1 - variant_id);
 
-      //
+      // distribute elements along the track
+      std::size_t elem_count(0);
       for (std::size_t segm_id = 0; segm_id < _traj_prop.segments.size(); ++segm_id) {
         const Properties::Trajectory::Segment &segment_prop(_traj_prop.segments[segm_id]);
         const Track::Belt::Segment &segment(track_.belt.segments[segm_id]);
@@ -160,8 +160,7 @@ private:
             ComputeChildPoseOffset(segment_prop.joint, 0, len_step / segment.joint_to_track));
 
         // place elements onto link sdf as long as length remains
-        std::size_t step_count(0);
-        while (len_left >= 0.) {
+        while (len_left >= 0. && elem_count < _pattern_prop.elements_per_round) {
           const Properties::Pattern::Element &element_prop(_pattern_prop.elements[elem_id]);
 
           // add <collision> of the element to link sdf
@@ -172,7 +171,7 @@ private:
             collision_elem->Copy(element_prop.collision_sdfs[collision_id]);
             // give <collision> a unique name
             collision_elem->GetAttribute("name")->Set(
-                "step" + boost::lexical_cast< std::string >(step_count) + "_collision" +
+                "element" + boost::lexical_cast< std::string >(elem_count) + "_collision" +
                 boost::lexical_cast< std::string >(collision_id));
             // set <collision>/<pose>
             const sdf::ElementPtr pose_elem(collision_elem->GetElement("pose"));
@@ -188,7 +187,7 @@ private:
             visual_elem->Copy(element_prop.visual_sdfs[visual_id]);
             // give <visual> a unique name
             visual_elem->GetAttribute("name")->Set(
-                "step" + boost::lexical_cast< std::string >(step_count) + "_visual" +
+                "element" + boost::lexical_cast< std::string >(elem_count) + "_visual" +
                 boost::lexical_cast< std::string >(visual_id));
             // set <visual>/<pose>
             const sdf::ElementPtr pose_elem(visual_elem->GetElement("pose"));
@@ -200,8 +199,8 @@ private:
           len_left -= len_step;
           len_traveled += len_step;
           elem_id = (elem_id + 1) % _pattern_prop.elements.size();
+          ++elem_count;
           base_pose = base_pose_step + base_pose;
-          ++step_count;
         }
 
         // update length traveled for the next segment
