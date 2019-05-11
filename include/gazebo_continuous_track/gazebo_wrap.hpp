@@ -105,7 +105,7 @@ public:
     if (_preserveWorldVelocity) {
       // child link's current pose & new pose based on position change
       const math::Pose child_pose(_joint->GetChild()->GetWorldPose());
-      const math::Pose new_child_pose(patch::ComputeChildLinkPose(_joint, _index, _position));
+      const math::Pose new_child_pose(patch::ChildLinkPose(_joint, _index, _position));
 
       // populate child links recursively
       physics::Link_V links;
