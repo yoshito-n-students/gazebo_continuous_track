@@ -335,9 +335,9 @@ private:
                                                        const double _from, const double _to) {
     return
         // child position when the joint position is <to>
-        patch::ComputeChildLinkPose(_joint, 0, _to)
+        patch::ChildLinkPose(_joint, 0, _to)
         // when <from>
-        - patch::ComputeChildLinkPose(_joint, 0, _from);
+        - patch::ChildLinkPose(_joint, 0, _from);
   }
 
   // **********************

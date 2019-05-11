@@ -29,8 +29,8 @@ template < typename T, class Derived > T StaticVar< T, Derived >::value_;
 // Pointer type of the private members we want to access
 typedef physics::Model_V physics::Model::*ModelsPtrT;
 
-// Actual implementation of ComputeChildLinkPose().
-// The member variables StaticVar<>::value_ is initialized to &Joint::ComputeChildLinkPose
+// Actual implementation of CreateNestedModel().
+// The member variables StaticVar<>::value_ is initialized to &Model::models
 // by CreateNestedModelImplInitializer.
 class CreateNestedModelImpl : private StaticVar< ModelsPtrT, CreateNestedModelImpl > {
   template < ModelsPtrT ModelsPtr > friend class CreateNestedModelImplInitializer;
@@ -64,7 +64,7 @@ template < ModelsPtrT ModelsPtr >
 CreateNestedModelImplInitializer< ModelsPtr >
     CreateNestedModelImplInitializer< ModelsPtr >::instance_;
 
-// Instantiate Initializer with &Joint::ComputeChildLinkPose
+// Instantiate Initializer with &Model::models
 // This calls the constructor of Initializer,
 // and it initializes CreateNestedModelImpl::StaticVar<>::value_ to the private member pointers.
 template class CreateNestedModelImplInitializer< &physics::Model::models >;
@@ -146,7 +146,7 @@ template class RemoveLinkImplInitializer< &physics::Model::RemoveLink >;
 // alternative of physics::Model::RemoveChild().
 // this alternative is required because of a critical bug in the original RemoveChild();
 // when a link to be removed is given,
-// the original tries to remove the link and also joints connected to the link. 
+// the original tries to remove the link and also joints connected to the link.
 // however, it can wrongly remove joints which are not connected to the link
 // because it does not care about namescope of links.
 static inline void RemoveLink(const physics::ModelPtr &_model, const physics::LinkPtr &_link) {
@@ -157,45 +157,52 @@ static inline void RemoveLink(const physics::ModelPtr &_model, const physics::Li
 // Joint
 // *****
 
-typedef math::Pose (physics::Joint::*ComputeChildLinkPosePtrT)(unsigned int, double);
+#if GAZEBO_MAJOR_VERSION >= 8
+typedef ignition::math::Pose3d (physics::Joint::*ChildLinkPosePtrT)(unsigned int, double);
+#else
+typedef math::Pose (physics::Joint::*ChildLinkPosePtrT)(unsigned int, double);
+#endif
 
-class ComputeChildLinkPoseImpl
-    : private StaticVar< ComputeChildLinkPosePtrT, ComputeChildLinkPoseImpl > {
-  template < ComputeChildLinkPosePtrT ComputeChildLinkPosePtr >
-  friend class ComputeChildLinkPoseImplInitializer;
-  typedef StaticVar< ComputeChildLinkPosePtrT, ComputeChildLinkPoseImpl >
-      ComputeChildLinkPosePtrVar;
+class ChildLinkPoseImpl : private StaticVar< ChildLinkPosePtrT, ChildLinkPoseImpl > {
+  template < ChildLinkPosePtrT ChildLinkPosePtr > friend class ChildLinkPoseImplInitializer;
+  typedef StaticVar< ChildLinkPosePtrT, ChildLinkPoseImpl > ChildLinkPosePtrVar;
 
 public:
   static ignition::math::Pose3d Call(const physics::JointPtr &_joint, const unsigned int _index,
                                      const double _position) {
-    return ((*_joint).*ComputeChildLinkPosePtrVar::value_)(_index, _position).Ign();
+#if GAZEBO_MAJOR_VERSION >= 8
+    return ((*_joint).*ChildLinkPosePtrVar::value_)(_index, _position);
+#else
+    return ((*_joint).*ChildLinkPosePtrVar::value_)(_index, _position).Ign();
+#endif
   }
 };
 
-template < ComputeChildLinkPosePtrT ComputeChildLinkPosePtr >
-class ComputeChildLinkPoseImplInitializer {
+template < ChildLinkPosePtrT ChildLinkPosePtr > class ChildLinkPoseImplInitializer {
 public:
-  ComputeChildLinkPoseImplInitializer() {
-    ComputeChildLinkPoseImpl::ComputeChildLinkPosePtrVar::value_ = ComputeChildLinkPosePtr;
+  ChildLinkPoseImplInitializer() {
+    ChildLinkPoseImpl::ChildLinkPosePtrVar::value_ = ChildLinkPosePtr;
   }
 
 private:
-  static ComputeChildLinkPoseImplInitializer instance_;
+  static ChildLinkPoseImplInitializer instance_;
 };
-template < ComputeChildLinkPosePtrT ComputeChildLinkPosePtr >
-ComputeChildLinkPoseImplInitializer< ComputeChildLinkPosePtr >
-    ComputeChildLinkPoseImplInitializer< ComputeChildLinkPosePtr >::instance_;
+template < ChildLinkPosePtrT ChildLinkPosePtr >
+ChildLinkPoseImplInitializer< ChildLinkPosePtr >
+    ChildLinkPoseImplInitializer< ChildLinkPosePtr >::instance_;
 
-template class ComputeChildLinkPoseImplInitializer< &physics::Joint::ComputeChildLinkPose >;
+#if GAZEBO_MAJOR_VERSION >= 8
+template class ChildLinkPoseImplInitializer< &physics::Joint::ChildLinkPose >;
+#else
+template class ChildLinkPoseImplInitializer< &physics::Joint::ComputeChildLinkPose >;
+#endif
 
-// physics::Joint::ComputeChildLinkPose() are safe to be public
+// physics::Joint::ChildLinkPose() are safe to be public
 // as it does not change member variables (so could be a const member function)
-// but it is actually a non-const private function ...
-static inline ignition::math::Pose3d ComputeChildLinkPose(const physics::JointPtr &_joint,
-                                                          const unsigned int _index,
-                                                          const double _position) {
-  return ComputeChildLinkPoseImpl::Call(_joint, _index, _position);
+// but it is actually a non-const protected function ...
+static inline ignition::math::Pose3d
+ChildLinkPose(const physics::JointPtr &_joint, const unsigned int _index, const double _position) {
+  return ChildLinkPoseImpl::Call(_joint, _index, _position);
 }
 
 } // namespace patch
