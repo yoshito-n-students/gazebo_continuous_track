@@ -214,6 +214,7 @@ private:
       const physics::ModelPtr model(
           patch::CreateNestedModel(_model, model_sdf->GetAttribute("name")->GetAsString()));
       model->Load(model_sdf);
+      model->Init();
 
       // create link/joint for each segment on the basis of updated sdfs
       for (std::size_t segm_id = 0; segm_id < _traj_prop.segments.size(); ++segm_id) {
@@ -229,6 +230,7 @@ private:
         variant.link = boost::dynamic_pointer_cast< physics::ODELink >(
             model->CreateLink(link_sdf->GetAttribute("name")->GetAsString()));
         variant.link->Load(link_sdf);
+        variant.link->Init();
         // copy base link pose because it may be changed by another plugin loaded before this
         variant.link->SetWorldPose(wrap::WorldPose(segment_prop.joint->GetChild()));
 
@@ -241,6 +243,7 @@ private:
                                            joint_sdf->GetAttribute("type")->GetAsString(),
                                            segment_prop.joint->GetParent(), variant.link);
         variant.joint->Load(joint_sdf);
+        variant.joint->Init();
         // set initial zero velocity
         SetJointMotorVelocity(variant.joint, 0, 0.);
 
@@ -249,8 +252,6 @@ private:
                   << " Created " << variant.link->GetScopedName() << " and "
                   << variant.joint->GetScopedName() << std::endl;
       }
-
-      model->Init();
     }
   }
 
