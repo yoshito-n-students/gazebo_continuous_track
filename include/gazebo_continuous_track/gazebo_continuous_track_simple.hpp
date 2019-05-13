@@ -20,21 +20,20 @@ namespace gazebo {
 class ContinuousTrackSimple : public ModelPlugin {
 public:
   void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) override {
-    const std::string plugin_name(_sdf->GetAttribute("name")->GetAsString());
+    // assert the given sdf can be parsed as plugin property config
+    const sdf::ElementPtr formatted_sdf(ToPluginSDF(_sdf));
 
+    const std::string plugin_name(formatted_sdf->GetAttribute("name")->GetAsString());
     std::cout << "[" << plugin_name << "]:"
               << " Start loading plugin" << std::endl;
 
     GZ_ASSERT(wrap::Physics(_model->GetWorld())->GetType() == "ode",
               "ContinuousTrackSimple only supports ODE.");
 
-    // assert the given sdf can be parsed as plugin property config
-    AssertPluginSDF(_sdf);
-
     // load from [sprocket] element
     double sprocket_diameter;
     {
-      const sdf::ElementPtr sprocket_elem(_sdf->GetElement("sprocket"));
+      const sdf::ElementPtr sprocket_elem(formatted_sdf->GetElement("sprocket"));
       // [joint]
       sprocket_joint_ = _model->GetJoint(sprocket_elem->GetElement("joint")->Get< std::string >());
       GZ_ASSERT(sprocket_joint_,
@@ -54,7 +53,7 @@ public:
 
     // load from [track] element
     {
-      const sdf::ElementPtr track_elem(_sdf->GetElement("track"));
+      const sdf::ElementPtr track_elem(formatted_sdf->GetElement("track"));
       // [segment] (multiple, +)
       for (sdf::ElementPtr segment_elem = track_elem->GetElement("segment"); segment_elem;
            segment_elem = segment_elem->GetNextElement("segment")) {
@@ -162,21 +161,25 @@ private:
 
   // get a sdf element which has been initialized by the plugin format file.
   // the initialied sdf may look empty but have a format information.
-  static sdf::ElementPtr InitializedPluginSDF() {
-    const sdf::ElementPtr sdf(new sdf::Element());
-    sdf::initFile(ros::package::getPath("gazebo_continuous_track") +
-                      "/sdf/continuous_track_simple_plugin.sdf",
-                  sdf);
-    return sdf;
+  static sdf::ElementPtr LoadPluginFormat() {
+    const sdf::ElementPtr fmt(new sdf::Element());
+    GZ_ASSERT(sdf::initFile(ros::package::getPath("gazebo_continuous_track") +
+                                "/sdf/continuous_track_simple_plugin.sdf",
+                            fmt),
+              "Cannot initialize sdf by continuous_track_simple_plugin.sdf");
+    return fmt;
   }
 
   // merge the plugin format sdf and the given sdf.
   // assert if the given sdf does not match the format
   // (ex. no required element, value type mismatch, ...).
-  static void AssertPluginSDF(const sdf::ElementPtr &_sdf) {
-    static const sdf::ElementPtr fmt_seed(InitializedPluginSDF());
-    const sdf::ElementPtr fmt(fmt_seed->Clone());
-    sdf::readString("<sdf version='" SDF_VERSION "'>" + _sdf->ToString("") + "</sdf>", fmt);
+  static sdf::ElementPtr ToPluginSDF(const sdf::ElementPtr &_src) {
+    static const sdf::ElementPtr fmt(LoadPluginFormat());
+    const sdf::ElementPtr dst(fmt->Clone());
+    GZ_ASSERT(
+        sdf::readString("<sdf version='" SDF_VERSION "'>" + _src->ToString("") + "</sdf>", dst),
+        "The given sdf does not match ContinuousTrackSimple plugin format");
+    return dst;
   }
 
 private:
