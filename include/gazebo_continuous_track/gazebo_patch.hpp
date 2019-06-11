@@ -101,10 +101,7 @@ public:
 
     // remove sdf update functions related to this link instance
     // or cause a runtime error on the next call of the parent model sdf's Update()
-    const sdf::ElementPtr sdf(_link->GetSDF());
-    // final call of update functions to leave the final properties in the link sdf
-    sdf->Update();
-    UnsetUpdateFuncs(sdf);
+    UnsetUpdateFuncs(_link->GetSDF());
 
     // remove the link as a child entity from the model
     _model->RemoveChild(_link->GetId());

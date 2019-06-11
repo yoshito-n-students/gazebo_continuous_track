@@ -351,8 +351,7 @@ private:
       // get link before removing joint
       // because joint->GetChild() does not work once joint has been removed (= detached)
       const physics::LinkPtr link(segment_prop.joint->GetChild());
-      // remove segment joint/link
-      segment_prop.joint->GetParent()->GetModel()->RemoveJoint(segment_prop.joint->GetScopedName());
+      // remove segment link (this also remove joints connected to the link)
       patch::RemoveLink(link->GetModel(), link);
 
       std::cout << "[" << track_.name << "]:"
