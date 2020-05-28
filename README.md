@@ -1,5 +1,6 @@
 # gazebo_continuous_track
-a realtime continuous track simulation for the Gazebo simulator & ROS with explicit consideration of friction and grouser Geometry
+a realtime continuous track simulation for the Gazebo simulator & ROS with explicit consideration of friction and grouser geometry
+
 [![YouTube thumbnail](https://img.youtube.com/vi/0bPqNbOKPuQ/0.jpg)](https://www.youtube.com/watch?v=0bPqNbOKPuQ)
 
 ## Citation
