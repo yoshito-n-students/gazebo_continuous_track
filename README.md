@@ -4,3 +4,6 @@ a realtime continuous track simulation for the Gazebo simulator & ROS with expli
 
 ## Citation
 > Y. Okada, S. Kojima, K. Ohno and S. Tadokoro, "Real-time Simulation of Non-Deformable Continuous Tracks with Explicit Consideration of Friction and Grouser Geometry," 2020 IEEE International Conference on Robotics and Automation (ICRA), 2020
+
+## Example
+[gazebo_continuous_track_example](https://github.com/yoshito-n-students/gazebo_continuous_track_example)
