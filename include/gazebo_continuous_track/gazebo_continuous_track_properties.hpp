@@ -156,9 +156,10 @@ private:
   // the initialied sdf may look empty but have a format information.
   static sdf::ElementPtr LoadPluginFormat() {
     const sdf::ElementPtr fmt(new sdf::Element());
-    GZ_ASSERT(sdf::initFile(ros::package::getPath("gazebo_continuous_track") +
-                                "/sdf/continuous_track_plugin.sdf",
-                            fmt),
+    bool success = sdf::initFile(ros::package::getPath("gazebo_continuous_track") +
+                                     "/sdf/continuous_track_plugin.sdf",
+                                 fmt);
+    GZ_ASSERT(success,
               "Cannot initialize sdf by continuous_track_plugin.sdf");
     return fmt;
   }
@@ -169,8 +170,9 @@ private:
   static sdf::ElementPtr ToPluginSDF(const sdf::ElementPtr &_sdf) {
     static const sdf::ElementPtr fmt(LoadPluginFormat());
     const sdf::ElementPtr dst(fmt->Clone());
+    bool success = sdf::readString("<sdf version='" SDF_VERSION "'>" + _sdf->ToString("") + "</sdf>", dst);
     GZ_ASSERT(
-        sdf::readString("<sdf version='" SDF_VERSION "'>" + _sdf->ToString("") + "</sdf>", dst),
+        success,
         "The given sdf does not match ContinuousTrack plugin format");
     return dst;
   }
